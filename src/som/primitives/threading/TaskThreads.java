@@ -6,8 +6,10 @@ import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.RecursiveTask;
 
 import com.oracle.truffle.api.RootCallTarget;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import som.interpreter.SomLanguage;
+import som.interpreter.nodes.ExpressionNode;
 import som.interpreter.objectstorage.ObjectTransitionSafepoint;
 import som.vm.Activity;
 import som.vm.VmSettings;
@@ -63,51 +65,24 @@ public final class TaskThreads {
     }
   }
 
-  public static class SomForkJoinTask extends SomTaskOrThread {
+  public static class SomForkJoinTask {
     private static final long serialVersionUID = -2145613708553535622L;
 
-    public SomForkJoinTask(final Object[] argArray, final boolean stopOnRoot) {
-      super(argArray, stopOnRoot);
-    }
+    public ExpressionNode node;
+    public VirtualFrame   frame;
+    public volatile boolean        stolen;
+    public volatile Object result;
 
-    @Override
-    public String getName() {
-      return getMethod().toString();
-    }
 
-    @Override
-    public ActivityType getType() { return ActivityType.TASK; }
-  }
+    public SomForkJoinTask(final ExpressionNode node, final VirtualFrame frame) {
 
-  public static class TracedForkJoinTask extends SomForkJoinTask {
-    private static final long serialVersionUID = -2763766745049695112L;
-
-    private final long id;
-    protected boolean stopOnJoin;
-
-    public TracedForkJoinTask(final Object[] argArray, final boolean stopOnRoot) {
-      super(argArray, stopOnRoot);
-      if (Thread.currentThread() instanceof TracingActivityThread) {
-        TracingActivityThread t = TracingActivityThread.currentThread();
-        this.id = t.generateActivityId();
-      } else {
-        this.id = 0; // main actor
-      }
-    }
-
-    @Override
-    public final boolean stopOnJoin() {
-      return stopOnJoin;
-    }
-
-    @Override
-    public void setStepToJoin(final boolean val) { stopOnJoin = val; }
-
-    @Override
-    public long getId() {
-      return id;
+      this.node = node;
+      this.frame = frame;
+      this.stolen = false;
+      this.result = null;
     }
   }
+
 
   public static class SomThreadTask extends SomTaskOrThread {
     private static final long serialVersionUID = -8700297704150992350L;

@@ -87,11 +87,26 @@ public final class EagerBinaryPrimitiveNode extends EagerPrimitive {
     return 2;
   }
 
+  public SSymbol getSelector() {
+    return selector;
+  }
+
+  @Override
+  public String toString() {
+    return "UninitMsgSend(" + selector.toString() + ")";
+  }
+
+  public ExpressionNode[] getArguments(){
+    ExpressionNode[] exprNode = new ExpressionNode[2];
+    exprNode[0] = argument;
+    exprNode[1] = receiver;
+    return exprNode;
+  }
   @Override
   public Object executeGeneric(final VirtualFrame frame) {
+
     Object rcvr = receiver.executeGeneric(frame);
     Object arg  = argument.executeGeneric(frame);
-
     return executeEvaluated(frame, rcvr, arg);
   }
 

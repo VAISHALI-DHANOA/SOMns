@@ -82,6 +82,18 @@ public final class EagerUnaryPrimitiveNode extends EagerPrimitive {
     return 1;
   }
 
+  public SSymbol getSelector() {
+    return selector;
+  }
+
+  @Override
+  public String toString() {
+    return "UninitMsgSend(" + selector.toString() + ")";
+  }
+
+  public ExpressionNode getArgument(){
+       return receiver;
+  }
   @Override
   public Object executeGeneric(final VirtualFrame frame) {
     Object rcvr = receiver.executeGeneric(frame);

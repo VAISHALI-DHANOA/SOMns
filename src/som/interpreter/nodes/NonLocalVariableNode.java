@@ -39,6 +39,11 @@ public abstract class NonLocalVariableNode extends ContextualNode {
     }
   }
 
+  public Local getVar()
+  {
+    return var;
+  }
+
   public abstract static class NonLocalVariableReadNode extends NonLocalVariableNode {
 
     public NonLocalVariableReadNode(final int contextLevel,

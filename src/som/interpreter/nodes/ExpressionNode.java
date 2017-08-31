@@ -49,7 +49,6 @@ public abstract class ExpressionNode extends SOMNode {
   public ExpressionNode(final SourceSection sourceSection) {
     super(sourceSection);
   }
-
   /**
    * Use for wrapping node only.
    */

@@ -36,6 +36,10 @@ public abstract class LocalVariableNode extends ExprWithTagsNode {
     }
   }
 
+  public Local getVar() {
+    return var;
+  }
+
   public abstract static class LocalVariableReadNode extends LocalVariableNode {
 
     public LocalVariableReadNode(final Local variable, final SourceSection source) {

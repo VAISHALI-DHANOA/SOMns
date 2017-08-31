@@ -84,7 +84,7 @@ class SortBenchmarks usingPlatform: platform andHarness: harness = (
     )
     
     sort: array low: low high: high = (
-      | pivot i j |
+      | pivot i j a b ta tb|
       
       pivot := array at: (low + high) / 2.
       i := low.
@@ -102,8 +102,13 @@ class SortBenchmarks usingPlatform: platform andHarness: harness = (
               i := i + 1.
               j := j - 1. ] ].
       
-      (low < j)  ifTrue: [ self sort: array low: low high: j  ].
-      (i < high) ifTrue: [ self sort: array low: i high: high ]
+	(low < j)  ifTrue: [ ta := Task spawn:[sort: array low: low high: j ]].
+
+	(i < high) ifTrue: [ tb := Task spawn:[sort: array low: i high: high ]].
+
+	(low < j)  ifTrue: [ta join].
+
+	(i < high) ifTrue: [tb join].
     )
     
     dataSize = ( ^800 )

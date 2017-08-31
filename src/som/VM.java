@@ -1,7 +1,10 @@
 package som;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -46,38 +49,47 @@ import som.vm.constants.KernelObj;
 import som.vmobjects.SObjectWithClass.SObjectWithoutFields;
 import tools.concurrency.ActorExecutionTrace;
 import tools.concurrency.TracingActors;
+import tools.concurrency.WorkStealingWorker.WSWork;
 import tools.debugger.Tags;
 import tools.debugger.WebDebugger;
 import tools.debugger.session.Breakpoints;
 import tools.dym.DynamicMetrics;
 import tools.language.StructuralProbe;
 
-
 public final class VM {
 
-  @CompilationFinal private PolyglotEngine engine;
+  @CompilationFinal
+  private PolyglotEngine       engine;
 
-  @CompilationFinal private StructuralProbe structuralProbe;
-  @CompilationFinal private WebDebugger webDebugger;
-  @CompilationFinal private Profiler truffleProfiler;
+  @CompilationFinal
+  private StructuralProbe      structuralProbe;
+  @CompilationFinal
+  private WebDebugger          webDebugger;
+  @CompilationFinal
+  private Profiler             truffleProfiler;
 
-  private final ForkJoinPool actorPool;
-  private final ForkJoinPool forkJoinPool;
-  private final ForkJoinPool processesPool;
-  private final ForkJoinPool threadPool;
+  private final ForkJoinPool   actorPool;
+  private final ForkJoinPool   forkJoinPool;
+  private final ForkJoinPool   processesPool;
+  private final ForkJoinPool   threadPool;
+  private final List<WSWork>         wsWork;
 
+  private final boolean        avoidExitForTesting;
+  @CompilationFinal
+  private ObjectSystem         objectSystem;
 
-  private final boolean avoidExitForTesting;
-  @CompilationFinal private ObjectSystem objectSystem;
+  private int                  lastExitCode = 0;
+  private volatile boolean     shouldExit   = false;
+  private final VmOptions      options;
 
-  private int lastExitCode = 0;
-  private volatile boolean shouldExit = false;
-  private final VmOptions options;
+  @CompilationFinal
+  private SObjectWithoutFields vmMirror;
+  @CompilationFinal
+  private Actor                mainActor;
 
-  @CompilationFinal private SObjectWithoutFields vmMirror;
-  @CompilationFinal private Actor mainActor;
+  private static final int     MAX_THREADS  = 0x7fff;
 
-  private static final int MAX_THREADS = 0x7fff;
+  public static final List<Thread> threads = Collections.synchronizedList(new ArrayList<Thread>());
 
   public VM(final VmOptions vmOptions, final boolean avoidExitForTesting) {
     this.avoidExitForTesting = avoidExitForTesting;
@@ -89,8 +101,19 @@ public final class VM {
         new ProcessThreadFactory(), new UncaughtExceptions(), true);
     forkJoinPool = new ForkJoinPool(VmSettings.NUM_THREADS,
         new ForkJoinThreadFactory(), new UncaughtExceptions(), false);
-    threadPool = new ForkJoinPool(MAX_THREADS,
-        new ForkJoinThreadFactory(), new UncaughtExceptions(), false);
+    threadPool = new ForkJoinPool(MAX_THREADS, new ForkJoinThreadFactory(),
+        new UncaughtExceptions(), false);
+
+    this.wsWork = Collections.synchronizedList(new ArrayList<WSWork>());
+
+    wsWork.add(new WSWork(forkJoinPool, 1));
+    wsWork.add(new WSWork(forkJoinPool, 2));
+    wsWork.add(new WSWork(forkJoinPool, 3));
+
+    for(WSWork w : wsWork)
+    {
+     w.execute();
+    }
   }
 
   public WebDebugger getWebDebugger() {
@@ -118,7 +141,8 @@ public final class VM {
   }
 
   /**
-   * Used in {@link som.tests.BasicInterpreterTests} to identify which basic test method to invoke.
+   * Used in {@link som.tests.BasicInterpreterTests} to identify which basic
+   * test method to invoke.
    */
   public String getTestSelector() {
     return options.testSelector;
@@ -144,7 +168,8 @@ public final class VM {
     // TODO: make thread-safe!!!
     // TODO: can I assert that it is locked?? helper on Node??
     if (VmSettings.INSTRUMENTATION) {
-      assert node.getSourceSection() != null || (node instanceof WrapperNode) : "Node needs source section, or needs to be wrapper";
+      assert node.getSourceSection() != null
+          || (node instanceof WrapperNode) : "Node needs source section, or needs to be wrapper";
       InstrumentationHandler.insertInstrumentationWrapper(node);
     }
   }
@@ -175,14 +200,13 @@ public final class VM {
   }
 
   /**
-   * @return true, if there are no scheduled submissions,
-   *         and no active threads in the pool, false otherwise.
-   *         This is only best effort, it does not look at the actor's
-   *         message queues.
+   * @return true, if there are no scheduled submissions, and no active threads
+   *         in the pool, false otherwise. This is only best effort, it does not
+   *         look at the actor's message queues.
    */
   public boolean isPoolIdle() {
     // TODO: this is not working when a thread blocks, then it seems
-    //       not to be considered running
+    // not to be considered running
     return actorPool.isQuiescent() && processesPool.isQuiescent()
         && forkJoinPool.isQuiescent() && threadPool.isQuiescent();
   }
@@ -223,7 +247,8 @@ public final class VM {
   }
 
   private void shutdownPools() {
-    ForkJoinPool[] pools = new ForkJoinPool[] {actorPool, processesPool, forkJoinPool, threadPool};
+    ForkJoinPool[] pools = new ForkJoinPool[] { actorPool, processesPool,
+        forkJoinPool, threadPool };
 
     for (ForkJoinPool pool : pools) {
       pool.shutdown();
@@ -265,7 +290,8 @@ public final class VM {
    * Instead, we instruct the main thread to do it, and merely kill the current
    * thread.
    *
-   * @param errorCode to be returned as exit code from the program
+   * @param errorCode
+   *          to be returned as exit code from the program
    */
   public void requestExit(final int errorCode) {
     TruffleCompiler.transferToInterpreter("exit");
@@ -334,14 +360,16 @@ public final class VM {
 
   public void initalize(final SomLanguage lang) throws IOException {
     assert objectSystem == null;
-    objectSystem = new ObjectSystem(new SourcecodeCompiler(lang), structuralProbe, this);
-    objectSystem.loadKernelAndPlatform(options.platformFile, options.kernelFile);
+    objectSystem = new ObjectSystem(new SourcecodeCompiler(lang),
+        structuralProbe, this);
+    objectSystem.loadKernelAndPlatform(options.platformFile,
+        options.kernelFile);
 
-    assert vmMirror  == null : "VM seems to be initialized already";
+    assert vmMirror == null : "VM seems to be initialized already";
     assert mainActor == null : "VM seems to be initialized already";
 
     mainActor = Actor.createActor(this);
-    vmMirror  = objectSystem.initialize();
+    vmMirror = objectSystem.initialize();
 
     if (VmSettings.ACTOR_TRACING) {
       ActorExecutionTrace.recordMainActor(mainActor, objectSystem);
@@ -378,10 +406,12 @@ public final class VM {
   private void startExecution(final Builder builder) {
     engine = builder.build();
 
-    Map<String, ? extends Instrument> instruments = engine.getRuntime().getInstruments();
+    Map<String, ? extends Instrument> instruments = engine.getRuntime()
+        .getInstruments();
     Instrument profiler = instruments.get(ProfilerInstrument.ID);
     if (options.profilingEnabled && profiler == null) {
-      VM.errorPrintln("Truffle profiler not available. Might be a class path issue");
+      VM.errorPrintln(
+          "Truffle profiler not available. Might be a class path issue");
     } else {
       profiler.setEnabled(options.profilingEnabled);
     }
@@ -445,14 +475,14 @@ public final class VM {
     SPromise.setSOMClass(null);
     SResolver.setSOMClass(null);
 
-    ThreadingModule.ThreadingModule  = null;
-    ThreadingModule.ThreadClass      = null;
-    ThreadingModule.ThreadClassId    = null;
-    ThreadingModule.TaskClass        = null;
-    ThreadingModule.TaskClassId      = null;
-    ThreadingModule.MutexClass       = null;
-    ThreadingModule.MutexClassId     = null;
-    ThreadingModule.ConditionClass   = null;
+    ThreadingModule.ThreadingModule = null;
+    ThreadingModule.ThreadClass = null;
+    ThreadingModule.ThreadClassId = null;
+    ThreadingModule.TaskClass = null;
+    ThreadingModule.TaskClassId = null;
+    ThreadingModule.MutexClass = null;
+    ThreadingModule.MutexClassId = null;
+    ThreadingModule.ConditionClass = null;
     ThreadingModule.ConditionClassId = null;
 
     ChannelPrimitives.resetClassReferences();
