@@ -1,5 +1,6 @@
 package som.interpreter.nodes;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.SourceSection;
 
@@ -26,20 +27,26 @@ public final class OptTaskNode extends ExprWithTagsNode {
      try {
       TracingActivityThread tracingThread = TracingActivityThread.currentThread();
 
-      if(tracingThread.taskQueue.isEmpty())
-      {
-        TracingActivityThread.currentThread().taskQueue.put(somTask);
-        System.out.println("Puts Work " + Thread.currentThread().getName());
-      }
-      else
-      {
+      if (isSystemLikelyIdle(tracingThread)) {
+        offerTaskForStealing(somTask, tracingThread);
+        System.out.println("Puts Work " + tracingThread.getName());
+      } else {
         somTask.result = block.executeGeneric(frame);
       }
-
     } catch (InterruptedException e) {
-
       System.out.println("Exception in Opt task node: " + e);
     }
     return somTask;
+  }
+
+  @TruffleBoundary
+  private void offerTaskForStealing(final SomForkJoinTask somTask,
+      final TracingActivityThread tracingThread) throws InterruptedException {
+    tracingThread.taskQueue.put(somTask);
+  }
+
+  @TruffleBoundary
+  private boolean isSystemLikelyIdle(final TracingActivityThread tracingThread) {
+    return tracingThread.taskQueue.isEmpty();
   }
 }
