@@ -78,9 +78,11 @@ public final class PostParsedVisitor implements NodeVisitor {
           }
         }
 
-        Node replacement = new OptTaskNode(node.getSourceSection(),
-            ValueTwoPrimFactory.create(false, node.getSourceSection(), exp[0],
-                real[1], real[2]));
+        Object array[] = new Object[] { real[1], real[2] };
+        Node replacement = new OptTaskNode(
+            node.getSourceSection(), ValueTwoPrimFactory.create(false,
+                node.getSourceSection(), null, null, null),
+            exp[0], new ExpressionNode[] { real[1], real[2] });
         node.replace(replacement);
         System.out.println("Spawn Node: " + replacement);
       }
@@ -93,8 +95,8 @@ public final class PostParsedVisitor implements NodeVisitor {
 
         ExpressionNode[] exp = msgSend.getArguments();
         Node replacement = new OptTaskNode(node.getSourceSection(),
-            ValueNonePrimFactory.create(false, node.getSourceSection(),
-                exp[0]));
+            ValueNonePrimFactory.create(false, node.getSourceSection(), null),
+            exp[0], new ExpressionNode[] {});
         Node n = exp[0];
 
         while (n.getParent() != null) {

@@ -6,10 +6,8 @@ import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.RecursiveTask;
 
 import com.oracle.truffle.api.RootCallTarget;
-import com.oracle.truffle.api.frame.VirtualFrame;
 
 import som.interpreter.SomLanguage;
-import som.interpreter.nodes.ExpressionNode;
 import som.interpreter.objectstorage.ObjectTransitionSafepoint;
 import som.vm.Activity;
 import som.vm.VmSettings;
@@ -68,16 +66,20 @@ public final class TaskThreads {
   public static class SomForkJoinTask {
     private static final long serialVersionUID = -2145613708553535622L;
 
-    public ExpressionNode node;
-    public VirtualFrame   frame;
+    public SBlock block;
+    public Object[] evaluateArgsForSpawn;
     public volatile boolean        stolen;
     public volatile Object result;
 
 
-    public SomForkJoinTask(final ExpressionNode node, final VirtualFrame frame) {
+    public SomForkJoinTask(final Object[] evaluateArgsForSpawn) {
 
-      this.node = node;
-      this.frame = frame;
+      this.evaluateArgsForSpawn = evaluateArgsForSpawn;
+      this.block = null;
+      if(evaluateArgsForSpawn != null)
+      {
+        this.block = (SBlock) evaluateArgsForSpawn[0];
+      }
       this.stolen = false;
       this.result = null;
     }

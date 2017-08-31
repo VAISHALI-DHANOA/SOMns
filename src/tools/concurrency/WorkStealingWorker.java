@@ -44,7 +44,7 @@ public class WorkStealingWorker implements Runnable {
 
           sf.stolen = true;
 
-          sf.result = sf.node.executeGeneric(sf.frame);
+          sf.result = sf.block.getMethod().invoke(sf.evaluateArgsForSpawn);
 
           System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
         }
