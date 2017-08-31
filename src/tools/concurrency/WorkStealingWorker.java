@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+
 import som.VM;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
 
@@ -29,14 +31,12 @@ public class WorkStealingWorker implements Runnable {
   }
 
   public static void computeResult(final String x) {
-
     List<Thread> copy = new ArrayList<Thread>(VM.threads);
+    Thread currentThread = Thread.currentThread();
 
     for (Thread victim : copy) {
-
-      if(!victim.equals(Thread.currentThread()))
-      {
-        SomForkJoinTask sf = ((TracingActivityThread)victim).taskQueue.poll();
+      if (!victim.equals(currentThread)) {
+        SomForkJoinTask sf = stealTask(victim);
 
         if (sf != null && !sf.stolen) {
 
@@ -46,10 +46,15 @@ public class WorkStealingWorker implements Runnable {
 
           sf.result = sf.node.executeGeneric(sf.frame);
 
-          System.out.println(x + " Puts result: " + sf.result + " " + Thread.currentThread().getName());
+          System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
         }
       }
     }
+  }
+
+  @TruffleBoundary
+  private static SomForkJoinTask stealTask(final Thread victim) {
+    return ((TracingActivityThread)victim).taskQueue.poll();
   }
 
   public int getID() {

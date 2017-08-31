@@ -2,6 +2,7 @@ package som.interpreter.nodes;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.SourceSection;
 
@@ -36,13 +37,7 @@ public class OptJoinNode extends ExprWithTagsNode {
 
         System.out.println("..");
 
-        if (reTries < maxReTries) {
-          waitTime = Math.min(maxWaitTime, getWaitTime(reTries));
-        } else {
-          waitTime = 500;
-        }
-        reTries += 1;
-        Thread.sleep(waitTime);
+        backOffBeforeStealing();
 
         if (task.result == null) {
           WorkStealingWorker.computeResult("Join");
@@ -53,6 +48,17 @@ public class OptJoinNode extends ExprWithTagsNode {
     }
 
     return task.result;
+  }
+
+  @TruffleBoundary
+  private void backOffBeforeStealing() throws InterruptedException {
+    if (reTries < maxReTries) {
+      waitTime = Math.min(maxWaitTime, getWaitTime(reTries));
+    } else {
+      waitTime = 500;
+    }
+    reTries += 1;
+    Thread.sleep(waitTime);
   }
 
   private long getWaitTime(final int retryCount) {
