@@ -13,10 +13,11 @@ import tools.concurrency.TracingActivityThread;
 public final class OptTaskNode extends ExprWithTagsNode {
 
   @Child
-  ExpressionNode valueSend;
+  private ExpressionNode valueSend;
   @Child
-  ExpressionNode block;
-  ExpressionNode argArray[];
+  private ExpressionNode block;
+  @Children
+  private final ExpressionNode argArray[];
 
   public OptTaskNode(final SourceSection source, final ExpressionNode valueSend,
       final ExpressionNode block, final ExpressionNode argArray[]) {
