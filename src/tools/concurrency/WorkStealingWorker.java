@@ -24,15 +24,16 @@ public class WorkStealingWorker implements Runnable {
 
   @Override
   public void run() {
-
+    Thread currentThread = Thread.currentThread();
     while (true) {
-      computeResult("WS");
+      computeResult("WS", currentThread);
     }
   }
 
-  public static void computeResult(final String x) {
+  @TruffleBoundary //Boundary added because method not yet optimized
+  public static void computeResult(final String x, final Thread currentThread) {
     List<Thread> copy = new ArrayList<Thread>(VM.threads);
-    Thread currentThread = Thread.currentThread();
+
 
     for (Thread victim : copy) {
       if (!victim.equals(currentThread)) {

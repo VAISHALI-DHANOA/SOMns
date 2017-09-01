@@ -30,6 +30,7 @@ public class OptJoinNode extends ExprWithTagsNode {
   public Object executeGeneric(final VirtualFrame frame) {
 
     SomForkJoinTask task = (SomForkJoinTask) receiver.executeGeneric(frame);
+    Thread currentThread = Thread.currentThread();
 
     try {
 
@@ -40,7 +41,7 @@ public class OptJoinNode extends ExprWithTagsNode {
         backOffBeforeStealing();
 
         if (task.result == null) {
-          WorkStealingWorker.computeResult("Join");
+          WorkStealingWorker.computeResult("Join", currentThread);
         }
       }
     } catch (Exception e) {
