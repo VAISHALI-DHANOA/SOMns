@@ -41,7 +41,7 @@ public final class OptTaskNode extends ExprWithTagsNode {
       if (isSystemLikelyIdle(tracingThread)) {
         somTask = new SomForkJoinTask(args);
         offerTaskForStealing(somTask, tracingThread);
-        System.out.println("Puts Work " + tracingThread.getName());
+        //System.out.println("Puts Work " + tracingThread.getName());
       }
       else {
         somTask = new SomForkJoinTask(null);

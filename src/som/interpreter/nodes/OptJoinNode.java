@@ -6,6 +6,8 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.SourceSection;
 
+import som.interpreter.nodes.dispatch.BlockDispatchNode;
+import som.interpreter.nodes.dispatch.BlockDispatchNodeGen;
 import som.interpreter.nodes.nary.ExprWithTagsNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
 import tools.concurrency.WorkStealingWorker;
@@ -13,7 +15,9 @@ import tools.concurrency.WorkStealingWorker;
 public class OptJoinNode extends ExprWithTagsNode {
 
   @Child
-  ExpressionNode receiver;
+  private ExpressionNode receiver;
+  @Child
+  private BlockDispatchNode dispatch;
 
   private int    reTries     = 0;
   private long   waitTime;
@@ -24,6 +28,7 @@ public class OptJoinNode extends ExprWithTagsNode {
       final ExpressionNode receiver) {
     super(source);
     this.receiver = receiver;
+    this.dispatch = BlockDispatchNodeGen.create();
   }
 
   @Override
@@ -36,12 +41,10 @@ public class OptJoinNode extends ExprWithTagsNode {
 
       while (task.result == null) {
 
-        System.out.println("..");
-
         backOffBeforeStealing();
 
         if (task.result == null) {
-          WorkStealingWorker.computeResult("Join", currentThread);
+          WorkStealingWorker.tryStealingAndExecuting("Join", currentThread, dispatch);
         }
       }
     } catch (Exception e) {

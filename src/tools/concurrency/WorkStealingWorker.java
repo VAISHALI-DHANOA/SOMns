@@ -9,6 +9,7 @@ import java.util.concurrent.ForkJoinPool;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 
 import som.VM;
+import som.interpreter.nodes.dispatch.BlockDispatchNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
 
 public class WorkStealingWorker implements Runnable {
@@ -26,12 +27,12 @@ public class WorkStealingWorker implements Runnable {
   public void run() {
     Thread currentThread = Thread.currentThread();
     while (true) {
-      computeResult("WS", currentThread);
+      tryStealingAndExecuting("WS", currentThread);
     }
   }
 
   @TruffleBoundary //Boundary added because method not yet optimized
-  public static void computeResult(final String x, final Thread currentThread) {
+  public static void tryStealingAndExecuting(final String x, final Thread currentThread) {
     List<Thread> copy = new ArrayList<Thread>(VM.threads);
 
 
@@ -40,6 +41,7 @@ public class WorkStealingWorker implements Runnable {
         SomForkJoinTask sf = stealTask(victim);
 
         if (sf != null && !sf.stolen) {
+          // System.out.print(x);
 
           assert(sf.result == null);
 
@@ -47,7 +49,33 @@ public class WorkStealingWorker implements Runnable {
 
           sf.result = sf.block.getMethod().invoke(sf.evaluateArgsForSpawn);
 
-          System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
+          //System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
+        }
+      }
+    }
+  }
+
+
+  @TruffleBoundary //Boundary added because method not yet optimized
+  public static void tryStealingAndExecuting(final String x, final Thread currentThread, final BlockDispatchNode dispatch) {
+    List<Thread> copy = new ArrayList<Thread>(VM.threads);
+
+
+    for (Thread victim : copy) {
+      if (!victim.equals(currentThread)) {
+        SomForkJoinTask sf = stealTask(victim);
+
+        if (sf != null && !sf.stolen) {
+          // System.out.print(x);
+
+          assert(sf.result == null);
+
+          sf.stolen = true;
+
+          sf.result = dispatch.executeDispatch(sf.evaluateArgsForSpawn);
+              //sf.block.getMethod().invoke(sf.evaluateArgsForSpawn);
+
+          //System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
         }
       }
     }
