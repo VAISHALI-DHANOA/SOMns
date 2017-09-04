@@ -38,6 +38,22 @@ public abstract class TracingActivityThread extends ForkJoinWorkerThread {
   // Work Steal Parameters
   public BlockingQueue<SomForkJoinTask> taskQueue = new LinkedBlockingQueue<SomForkJoinTask>();
 
+  public int workStealingTries = 0;
+  public final SimpleRandom backoffRnd = new SimpleRandom();
+
+  public static class SimpleRandom {
+    private int seed = 74755;
+
+    public int next() {
+      seed = ((seed * 1309) + 13849) & 65535;
+      return seed;
+    }
+
+    public int next(final int bound) {
+      return next() % bound;
+    }
+  }
+
   private static class ConcurrentEntityScope {
 
     private final EntityType            type;
@@ -63,7 +79,11 @@ public abstract class TracingActivityThread extends ForkJoinWorkerThread {
       traceBuffer = null;
     }
     setName(getClass().getSimpleName() + "-" + threadId);
-    VM.threads.add(this);
+
+    synchronized (VM.threads) {
+      VM.threads[VM.numWSThreads] = this;
+      VM.numWSThreads += 1;
+    }
   }
 
   public abstract Activity getActivity();

@@ -64,24 +64,12 @@ public final class TaskThreads {
   }
 
   public static class SomForkJoinTask {
-    private static final long serialVersionUID = -2145613708553535622L;
-
-    public SBlock block;
-    public Object[] evaluateArgsForSpawn;
-    public volatile boolean        stolen;
-    public volatile Object result;
-
+    public final Object[]   evaluateArgsForSpawn;
+    public volatile boolean stolen;
+    public volatile Object  result;
 
     public SomForkJoinTask(final Object[] evaluateArgsForSpawn) {
-
       this.evaluateArgsForSpawn = evaluateArgsForSpawn;
-      this.block = null;
-      if(evaluateArgsForSpawn != null)
-      {
-        this.block = (SBlock) evaluateArgsForSpawn[0];
-      }
-      this.stolen = false;
-      this.result = null;
     }
   }
 

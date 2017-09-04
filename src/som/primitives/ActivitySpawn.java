@@ -24,6 +24,7 @@ import som.primitives.threading.TaskThreads.SomForkJoinTask;
 import som.primitives.threading.TaskThreads.SomThreadTask;
 import som.primitives.threading.TaskThreads.TracedThreadTask;
 import som.primitives.threading.ThreadingModule;
+import som.vm.NotYetImplementedException;
 import som.vm.VmSettings;
 import som.vm.constants.KernelObj;
 import som.vm.constants.Nil;
@@ -101,10 +102,7 @@ public abstract class ActivitySpawn {
     @Specialization(guards = "clazz == TaskClass")
     @TruffleBoundary
     public final SomForkJoinTask spawnTask(final SClass clazz, final SBlock block) {
-      SomForkJoinTask task = createTask(new Object[] {block},
-          onExec.executeShouldHalt(), block, sourceSection);
-      //forkJoinPool.execute(task);
-      return task;
+      throw new NotYetImplementedException(); // not supported anymore
     }
 
     @Specialization(guards = "clazz == ThreadClass")
@@ -174,10 +172,7 @@ public abstract class ActivitySpawn {
     @Specialization(guards = "clazz == TaskClass")
     public SomForkJoinTask spawnTask(final SClass clazz, final SBlock block,
         final SArray somArgArr, final Object[] argArr) {
-      SomForkJoinTask task = createTask(argArr,
-          onExec.executeShouldHalt(), block, sourceSection);
-      //forkJoinPool.execute(task);
-      return task;
+      throw new NotYetImplementedException(); // not supported anymore
     }
 
     @Specialization(guards = "clazz == ThreadClass")

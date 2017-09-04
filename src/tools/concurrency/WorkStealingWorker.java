@@ -1,9 +1,5 @@
-//http://www.programcreek.com/java-api-examples/index.php?api=com.oracle.truffle.api.Truffle
-//http://cesquivias.github.io/blog/2014/12/02/writing-a-language-in-truffle-part-2-using-truffle-and-graal/
 package tools.concurrency;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -11,87 +7,125 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import som.VM;
 import som.interpreter.nodes.dispatch.BlockDispatchNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
+import som.vmobjects.SBlock;
 
 public class WorkStealingWorker implements Runnable {
 
   public WSWork         wsTask;
-  private int           ID;
   public static boolean taskExecuted = false;
 
-  public WorkStealingWorker(final WSWork task, final int id) {
+  public WorkStealingWorker(final WSWork task) {
     this.wsTask = task;
-    this.ID = id;
   }
 
   @Override
   public void run() {
-    Thread currentThread = Thread.currentThread();
+    TracingActivityThread currentThread = TracingActivityThread.currentThread();
+
     while (true) {
-      tryStealingAndExecuting("WS", currentThread);
+      boolean stolenTask = tryStealingAndExecuting(currentThread);
+      //doBackoffIfNecessary(currentThread, stolenTask);
     }
   }
 
-  @TruffleBoundary //Boundary added because method not yet optimized
-  public static void tryStealingAndExecuting(final String x, final Thread currentThread) {
-    List<Thread> copy = new ArrayList<Thread>(VM.threads);
-
-
-    for (Thread victim : copy) {
-      if (!victim.equals(currentThread)) {
-        SomForkJoinTask sf = stealTask(victim);
-
-        if (sf != null && !sf.stolen) {
-          // System.out.print(x);
-
-          assert(sf.result == null);
-
-          sf.stolen = true;
-
-          sf.result = sf.block.getMethod().invoke(sf.evaluateArgsForSpawn);
-
-          //System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
-        }
-      }
+  public static void doBackoffIfNecessary(
+      final TracingActivityThread currentThread, final boolean stolenTask) {
+    if (stolenTask) {
+      currentThread.workStealingTries = 0;
+    } else {
+      //WorkStealingWorker.backOffBeforeRetryingStealing(currentThread);
     }
   }
 
+  public static boolean tryStealingAndExecuting(final TracingActivityThread currentThread) {
 
-  @TruffleBoundary //Boundary added because method not yet optimized
-  public static void tryStealingAndExecuting(final String x, final Thread currentThread, final BlockDispatchNode dispatch) {
-    List<Thread> copy = new ArrayList<Thread>(VM.threads);
+    SomForkJoinTask sf = stealTask(currentThread);
 
+    if(sf == null)
+    {
+      TracingActivityThread victim = selectVictim(currentThread);
 
-    for (Thread victim : copy) {
-      if (!victim.equals(currentThread)) {
-        SomForkJoinTask sf = stealTask(victim);
-
-        if (sf != null && !sf.stolen) {
-          // System.out.print(x);
-
-          assert(sf.result == null);
-
-          sf.stolen = true;
-
-          sf.result = dispatch.executeDispatch(sf.evaluateArgsForSpawn);
-              //sf.block.getMethod().invoke(sf.evaluateArgsForSpawn);
-
-          //System.out.println(x + " Puts result: " + sf.result + " " + currentThread.getName());
-        }
+      if (victim != currentThread) {
+       sf = stealTask(victim);
       }
     }
+
+    if (sf != null && !sf.stolen) {
+      assert sf.result == null;
+
+      sf.stolen = true;
+
+      SBlock block = (SBlock) sf.evaluateArgsForSpawn[0];
+      Object result = block.getMethod().invoke(sf.evaluateArgsForSpawn);
+
+      assert sf.result == null;
+      sf.result = result;
+      return true;
+    }
+
+    return false;
+  }
+
+  public static boolean tryStealingAndExecuting(final TracingActivityThread currentThread, final BlockDispatchNode dispatch) {
+
+    SomForkJoinTask sf = stealTask(currentThread);
+
+    if(sf == null)
+    {
+      TracingActivityThread victim = selectVictim(currentThread);
+
+      if (victim != currentThread) {
+        sf = stealTask(victim);
+       }
+    }
+
+    if (sf != null && !sf.stolen) {
+      assert sf.result == null;
+
+      sf.stolen = true;
+
+      Object result = dispatch.executeDispatch(sf.evaluateArgsForSpawn);
+      assert sf.result == null;
+      sf.result = result;
+      return true;
+    }
+
+    return false;
+  }
+
+
+  public static TracingActivityThread selectVictim(final TracingActivityThread currentThread) {
+    int victimIdx = currentThread.backoffRnd.next(VM.numWSThreads);
+
+    return VM.threads[victimIdx];
   }
 
   @TruffleBoundary
-  private static SomForkJoinTask stealTask(final Thread victim) {
-    return ((TracingActivityThread)victim).taskQueue.poll();
+  private static SomForkJoinTask stealTask(final TracingActivityThread victim) {
+    return victim.taskQueue.poll();
   }
 
-  public int getID() {
-    return ID;
+  private static final int maxWaitTime          = 250;
+  private static final int reTriesBeforeWaiting = 50000;
+
+  @TruffleBoundary
+  public static void backOffBeforeRetryingStealing(final TracingActivityThread thread) {
+    thread.workStealingTries += 1;
+
+    if (thread.workStealingTries < reTriesBeforeWaiting) {
+      return;
+    }
+
+    long waitTime = Math.min(maxWaitTime, getWaitTime(thread.workStealingTries - reTriesBeforeWaiting, thread));
+
+    try {
+      Thread.sleep(waitTime);
+    } catch (InterruptedException e) {}
   }
 
-  public void setID(final int iD) {
-    this.ID = iD;
+  private static long getWaitTime(final int retryCount,final TracingActivityThread thread) {
+
+    return retryCount * thread.backoffRnd.next(maxWaitTime / 20);
   }
 
   public static class Join extends RuntimeException {
@@ -107,17 +141,15 @@ public class WorkStealingWorker implements Runnable {
   public static class WSWork {
 
     private ForkJoinPool       fjPool;
-    private int                ID;
     private WorkStealingWorker wsworker;
 
-    public WSWork(final ForkJoinPool fj, final int ID) {
+    public WSWork(final ForkJoinPool fj) {
       this.fjPool = fj;
-      this.ID = ID;
       this.wsworker = createWorkers();
     }
 
     public WorkStealingWorker createWorkers() {
-      return new WorkStealingWorker(this, this.ID);
+      return new WorkStealingWorker(this);
     }
 
     public void execute() {

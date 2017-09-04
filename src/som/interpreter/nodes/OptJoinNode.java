@@ -1,8 +1,5 @@
 package som.interpreter.nodes;
 
-import java.util.concurrent.ThreadLocalRandom;
-
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.SourceSection;
 
@@ -10,19 +7,13 @@ import som.interpreter.nodes.dispatch.BlockDispatchNode;
 import som.interpreter.nodes.dispatch.BlockDispatchNodeGen;
 import som.interpreter.nodes.nary.ExprWithTagsNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
+import tools.concurrency.TracingActivityThread;
 import tools.concurrency.WorkStealingWorker;
 
 public class OptJoinNode extends ExprWithTagsNode {
 
-  @Child
-  private ExpressionNode receiver;
-  @Child
-  private BlockDispatchNode dispatch;
-
-  private int    reTries     = 0;
-  private long   waitTime;
-  private long   maxWaitTime = 1500L;
-  private int    maxReTries  = 10;
+  @Child private ExpressionNode receiver;
+  @Child private BlockDispatchNode dispatch;
 
   public OptJoinNode(final SourceSection source,
       final ExpressionNode receiver) {
@@ -35,41 +26,12 @@ public class OptJoinNode extends ExprWithTagsNode {
   public Object executeGeneric(final VirtualFrame frame) {
 
     SomForkJoinTask task = (SomForkJoinTask) receiver.executeGeneric(frame);
-    Thread currentThread = Thread.currentThread();
+    TracingActivityThread currentThread = TracingActivityThread.currentThread();
 
-    try {
-
-      while (task.result == null) {
-
-        backOffBeforeStealing();
-
-        if (task.result == null) {
-          WorkStealingWorker.tryStealingAndExecuting("Join", currentThread, dispatch);
-        }
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
+    while (task.result == null) {
+      boolean stolenTask = WorkStealingWorker.tryStealingAndExecuting(currentThread, dispatch);
+      //WorkStealingWorker.doBackoffIfNecessary(currentThread, stolenTask);
     }
-
     return task.result;
   }
-
-  @TruffleBoundary
-  private void backOffBeforeStealing() throws InterruptedException {
-    if (reTries < maxReTries) {
-      waitTime = Math.min(maxWaitTime, getWaitTime(reTries));
-    } else {
-      waitTime = 500;
-    }
-    reTries += 1;
-    Thread.sleep(waitTime);
-  }
-
-  private long getWaitTime(final int retryCount) {
-
-    long randomNum = ThreadLocalRandom.current().nextInt(0, 1000 + 1);
-    long waitTime = ((long) Math.pow(2, retryCount) * randomNum);
-    return waitTime;
-  }
-
 }

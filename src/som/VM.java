@@ -48,6 +48,7 @@ import som.vm.VmSettings;
 import som.vm.constants.KernelObj;
 import som.vmobjects.SObjectWithClass.SObjectWithoutFields;
 import tools.concurrency.ActorExecutionTrace;
+import tools.concurrency.TracingActivityThread;
 import tools.concurrency.TracingActors;
 import tools.concurrency.WorkStealingWorker.WSWork;
 import tools.debugger.Tags;
@@ -89,7 +90,10 @@ public final class VM {
 
   private static final int     MAX_THREADS  = 0x7fff;
 
-  public static final List<Thread> threads = Collections.synchronizedList(new ArrayList<Thread>());
+  public static final int MAX_WS_THREADS = 100;
+  @CompilationFinal(dimensions = 1)
+  public static final TracingActivityThread[] threads = new TracingActivityThread[MAX_WS_THREADS];
+  @CompilationFinal public static int numWSThreads = 0;
 
   public VM(final VmOptions vmOptions, final boolean avoidExitForTesting) {
     this.avoidExitForTesting = avoidExitForTesting;
@@ -106,12 +110,11 @@ public final class VM {
 
     this.wsWork = Collections.synchronizedList(new ArrayList<WSWork>());
 
-    wsWork.add(new WSWork(forkJoinPool, 1));
-    wsWork.add(new WSWork(forkJoinPool, 2));
-    wsWork.add(new WSWork(forkJoinPool, 3));
+    wsWork.add(new WSWork(forkJoinPool));
+    wsWork.add(new WSWork(forkJoinPool));
+    wsWork.add(new WSWork(forkJoinPool));
 
-    for(WSWork w : wsWork)
-    {
+    for (WSWork w : wsWork) {
      w.execute();
     }
   }
@@ -247,8 +250,7 @@ public final class VM {
   }
 
   private void shutdownPools() {
-    ForkJoinPool[] pools = new ForkJoinPool[] { actorPool, processesPool,
-        forkJoinPool, threadPool };
+    ForkJoinPool[] pools = new ForkJoinPool[] {actorPool, processesPool, forkJoinPool, threadPool};
 
     for (ForkJoinPool pool : pools) {
       pool.shutdown();
