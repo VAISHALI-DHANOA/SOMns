@@ -31,3 +31,4 @@ benchmark_forkjoin:
   script:
     - ant compile
     - rebench -d --without-nice codespeed.conf fj
+    - ./bench-results.sh
