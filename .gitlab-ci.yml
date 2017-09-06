@@ -24,29 +24,10 @@ full_test_job:
     - timeout 10m ant dynamic-metrics-tests replay-tests
     - cd tools/kompos && npm install && npm test
 
-benchmark_savina_job:
+benchmark_forkjoin:
   stage: benchmark
   tags: [benchmarks, infinity]
   allow_failure: true
   script:
     - ant compile
-    - export EXP=`if [[ "$CI_BUILD_REF_NAME" = "master" ]]; then echo "SOMns-Savina"; else echo "SOMns-Savina-exp"; fi`; rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns-Savina --branch=master codespeed.conf $EXP
-
-benchmark_job:
-  stage: benchmark
-  tags: [benchmarks, infinity]
-  allow_failure: true
-  script:
-    - ant compile
-    - export EXP=`if [[ "$CI_BUILD_REF_NAME" = "master" ]]; then echo "SOMns"; else echo "SOMns-exp"; fi`; rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns --branch=master codespeed.conf $EXP
-
-benchmark_nightly_job:
-  stage: benchmark
-  tags: [benchmarks, infinity]
-  allow_failure: true
-  only:
-    - triggers
-  script:
-    - ant compile
-    - rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns --branch=master codespeed.conf nightly
-    - rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns --branch=master codespeed.conf SOMns-Savina-tracing
+    - rebench -d --without-nice codespeed.conf fj
