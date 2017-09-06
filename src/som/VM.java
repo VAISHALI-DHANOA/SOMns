@@ -110,13 +110,17 @@ public final class VM {
 
     this.wsWork = Collections.synchronizedList(new ArrayList<WSWork>());
 
-    wsWork.add(new WSWork(forkJoinPool));
-    wsWork.add(new WSWork(forkJoinPool));
-    wsWork.add(new WSWork(forkJoinPool));
+    if(!VmSettings.ENABLE_ORG)
+    {
+      wsWork.add(new WSWork(forkJoinPool));
+      wsWork.add(new WSWork(forkJoinPool));
+      wsWork.add(new WSWork(forkJoinPool));
 
-    for (WSWork w : wsWork) {
-     w.execute();
+      for (WSWork w : wsWork) {
+       w.execute();
+      }
     }
+
   }
 
   public WebDebugger getWebDebugger() {

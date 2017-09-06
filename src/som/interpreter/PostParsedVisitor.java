@@ -19,6 +19,7 @@ import som.interpreter.nodes.nary.EagerTernaryPrimitiveNode;
 import som.interpreter.nodes.nary.EagerUnaryPrimitiveNode;
 import som.primitives.BlockPrimsFactory.ValueNonePrimFactory;
 import som.primitives.BlockPrimsFactory.ValueTwoPrimFactory;
+import som.vm.VmSettings;
 
 public final class PostParsedVisitor implements NodeVisitor {
 
@@ -44,6 +45,52 @@ public final class PostParsedVisitor implements NodeVisitor {
 
   @Override
   public boolean visit(final Node node) {
+
+    if (VmSettings.ENABLE_SEQUENTIAL) {
+
+      if (node instanceof EagerTernaryPrimitiveNode) {
+        EagerTernaryPrimitiveNode msgSend = (EagerTernaryPrimitiveNode) node;
+
+        if (msgSend.getSelector().getString().equals("spawn:with:")) {
+
+          ExpressionNode[] exp = msgSend.getArguments();
+          ExpressionNode[] real = new ExpressionNode[3];
+
+          if (exp[1] instanceof AbstractUninitializedMessageSendNode) {
+
+            AbstractUninitializedMessageSendNode o = (AbstractUninitializedMessageSendNode) exp[1];
+            real = o.getArguments();
+          }
+          Node replacement = ValueTwoPrimFactory.create(false,
+              node.getSourceSection(), exp[0], real[1], real[2]);
+          node.replace(replacement);
+        }
+      }
+
+      if (node instanceof EagerBinaryPrimitiveNode) {
+        EagerBinaryPrimitiveNode msgSend = (EagerBinaryPrimitiveNode) node;
+
+        if (msgSend.getSelector().getString().equals("spawn:")) {
+
+          ExpressionNode[] exp = msgSend.getArguments();
+          Node replacement = ValueNonePrimFactory.create(false,
+              node.getSourceSection(), exp[0]);
+          node.replace(replacement);
+        }
+      }
+
+      if (node instanceof EagerUnaryPrimitiveNode) {
+
+        EagerUnaryPrimitiveNode joinNode = (EagerUnaryPrimitiveNode) node;
+
+        if (joinNode.getSelector().getString().equals("join")) {
+
+          ExpressionNode exp = joinNode.getArgument();
+          node.replace(exp);
+        }
+      }
+      return true;
+    }
 
     if (node instanceof EagerTernaryPrimitiveNode) {
       EagerTernaryPrimitiveNode msgSend = (EagerTernaryPrimitiveNode) node;
@@ -120,7 +167,7 @@ public final class PostParsedVisitor implements NodeVisitor {
       }
     }
 
-    else if (node instanceof EagerUnaryPrimitiveNode) {
+    if (node instanceof EagerUnaryPrimitiveNode) {
 
       EagerUnaryPrimitiveNode joinNode = (EagerUnaryPrimitiveNode) node;
 

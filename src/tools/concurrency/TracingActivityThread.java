@@ -23,7 +23,7 @@ public abstract class TracingActivityThread extends ForkJoinWorkerThread {
   protected long                        nextActivityId = 1;
   protected long                        nextMessageId;
   protected long                        nextPromiseId;
-
+  protected long                        nextEntityId;
   // Used for tracing, accessed by the ExecAllMessages classes
   public long                           createdMessages;
   public long                           resolvedPromises;
@@ -80,9 +80,12 @@ public abstract class TracingActivityThread extends ForkJoinWorkerThread {
     }
     setName(getClass().getSimpleName() + "-" + threadId);
 
-    synchronized (VM.threads) {
-      VM.threads[VM.numWSThreads] = this;
-      VM.numWSThreads += 1;
+    if(!VmSettings.ENABLE_ORG)
+    {
+      synchronized (VM.threads) {
+        VM.threads[VM.numWSThreads] = this;
+        VM.numWSThreads += 1;
+      }
     }
   }
 
@@ -164,4 +167,21 @@ public abstract class TracingActivityThread extends ForkJoinWorkerThread {
   public static TracingActivityThread currentThread() {
     return (TracingActivityThread) Thread.currentThread();
   }
+
+  private long generateEntityId() {
+    long result = nextEntityId;
+    nextEntityId++;
+    assert TraceData.isWithinJSIntValueRange(result);
+    assert result != -1 : "-1 is not a valid entity id";
+    return result;
+}
+
+  public static long newEntityId() {
+    if (VmSettings.ACTOR_TRACING && Thread.currentThread() instanceof TracingActivityThread) {
+      TracingActivityThread t = TracingActivityThread.currentThread();
+      return t.generateEntityId();
+    } else {
+      return 0; // main actor
+    }
+}
 }

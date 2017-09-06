@@ -53,6 +53,7 @@ import som.interpreter.SomLanguage;
 import som.interpreter.nodes.ExpressionNode;
 import som.interpreter.nodes.OuterObjectReadNodeGen;
 import som.interpreter.nodes.ReturnNonLocalNode;
+import som.vm.VmSettings;
 import som.vm.constants.Nil;
 import som.vmobjects.SInvokable;
 import som.vmobjects.SInvokable.SInitializer;
@@ -282,22 +283,23 @@ public final class MethodBuilder {
   public SInvokable assemble(final ExpressionNode body,
       final AccessModifier accessModifier, final SourceSection sourceSection) {
 
-    MethodScope splitScope = currentScope.split();
 
+    if(VmSettings.ENABLE_ORG)
+    {
+      Method truffleMethod = assembleInvokable(body, sourceSection);
+      SInvokable meth = new SInvokable(signature, accessModifier,
+          truffleMethod, embeddedBlockMethods.toArray(new SInvokable[0]));
+      language.getVM().reportParsedRootNode(truffleMethod);
+      return meth;
+    }
+
+    MethodScope splitScope = currentScope.split();
     ExpressionNode splitBody = PostParsedVisitor.doInline(body, splitScope, 0,
         language.getVM());
-
     Method truffleMethod = assembleInvokable(splitBody, sourceSection);
-
-    // MethodScope splitScope = currentScope.split();
-    // ExpressionNode splitBody = InliningVisitor.doInline(body, splitScope, 0);
-    // Method truffleMethod = assembleInvokable(splitBody, splitScope,
-    // sourceSection);
-
     SInvokable meth = new SInvokable(signature, accessModifier, truffleMethod,
         embeddedBlockMethods.toArray(new SInvokable[0]));
     language.getVM().reportParsedRootNode(truffleMethod);
-    // the method's holder field is to be set later on!
     return meth;
   }
 

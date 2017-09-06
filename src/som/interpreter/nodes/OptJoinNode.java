@@ -7,6 +7,7 @@ import som.interpreter.nodes.dispatch.BlockDispatchNode;
 import som.interpreter.nodes.dispatch.BlockDispatchNodeGen;
 import som.interpreter.nodes.nary.ExprWithTagsNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
+import som.vm.VmSettings;
 import tools.concurrency.TracingActivityThread;
 import tools.concurrency.WorkStealingWorker;
 
@@ -30,7 +31,9 @@ public class OptJoinNode extends ExprWithTagsNode {
 
     while (task.result == null) {
       boolean stolenTask = WorkStealingWorker.tryStealingAndExecuting(currentThread, dispatch);
-      //WorkStealingWorker.doBackoffIfNecessary(currentThread, stolenTask);
+      if(VmSettings.ENABLE_BACKOFF) {
+        WorkStealingWorker.doBackoffIfNecessary(currentThread, stolenTask);
+      }
     }
     return task.result;
   }

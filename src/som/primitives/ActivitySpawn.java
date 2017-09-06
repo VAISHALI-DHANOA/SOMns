@@ -20,11 +20,11 @@ import som.primitives.arrays.ToArgumentsArrayNodeFactory;
 import som.primitives.processes.ChannelPrimitives;
 import som.primitives.processes.ChannelPrimitives.Process;
 import som.primitives.processes.ChannelPrimitives.TracingProcess;
+import som.primitives.threading.TaskThreads.SomForkJoinOrg;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
 import som.primitives.threading.TaskThreads.SomThreadTask;
 import som.primitives.threading.TaskThreads.TracedThreadTask;
 import som.primitives.threading.ThreadingModule;
-import som.vm.NotYetImplementedException;
 import som.vm.VmSettings;
 import som.vm.constants.KernelObj;
 import som.vm.constants.Nil;
@@ -42,21 +42,30 @@ import tools.debugger.entities.BreakpointType;
 import tools.debugger.nodes.AbstractBreakpointNode;
 import tools.debugger.session.Breakpoints;
 
-
 public abstract class ActivitySpawn {
 
-  private static SomForkJoinTask createTask(final Object[] argArray,
-      final boolean stopOnRoot, final SBlock block, final SourceSection section) {
+  private static SomForkJoinOrg createTask(final Object[] argArray,
+      final boolean stopOnRoot, final SBlock block,
+      final SourceSection section, final boolean flag) {
+    SomForkJoinOrg task = new SomForkJoinOrg(argArray, stopOnRoot);
 
+    return task;
+  }
+
+  private static SomForkJoinTask createTask(final Object[] argArray,
+      final boolean stopOnRoot, final SBlock block,
+      final SourceSection section) {
     return null;
   }
 
   private static SomThreadTask createThread(final Object[] argArray,
-      final boolean stopOnRoot, final SBlock block, final SourceSection section) {
+      final boolean stopOnRoot, final SBlock block,
+      final SourceSection section) {
     SomThreadTask thread;
     if (VmSettings.ACTOR_TRACING) {
       thread = new TracedThreadTask(argArray, stopOnRoot);
-      ActorExecutionTrace.threadSpawn(block.getMethod(), thread.getId(), section);
+      ActorExecutionTrace.threadSpawn(block.getMethod(), thread.getId(),
+          section);
     } else {
       thread = new SomThreadTask(argArray, stopOnRoot);
     }
@@ -79,35 +88,47 @@ public abstract class ActivitySpawn {
   }
 
   @GenerateNodeFactory
-  @ImportStatic({ThreadingModule.class, ChannelPrimitives.class, ActivitySpawn.class})
+  @ImportStatic({ ThreadingModule.class, ChannelPrimitives.class,
+      ActivitySpawn.class })
   @Primitive(primitive = "threading:threadSpawn:", requiresContext = true)
   @Primitive(primitive = "threading:taskSpawn:", requiresContext = true)
   @Primitive(selector = "spawn:", requiresContext = true)
   public abstract static class SpawnPrim extends BinaryComplexOperation {
-    private final ForkJoinPool forkJoinPool;
-    private final ForkJoinPool processesPool;
-    private final ForkJoinPool threadPool;
 
-    /** Breakpoint info for triggering suspension on first execution of code in activity. */
-    @Child protected AbstractBreakpointNode onExec;
+    private final ForkJoinPool       forkJoinPool;
+    private final ForkJoinPool       processesPool;
+    private final ForkJoinPool       threadPool;
+
+    /**
+     * Breakpoint info for triggering suspension on first execution of code in
+     * activity.
+     */
+    @Child
+    protected AbstractBreakpointNode onExec;
 
     public SpawnPrim(final boolean ew, final SourceSection s, final VM vm) {
       super(ew, s);
-      this.forkJoinPool  = vm.getForkJoinPool();
+      this.forkJoinPool = vm.getForkJoinPool();
       this.processesPool = vm.getProcessPool();
-      this.threadPool    = vm.getThreadPool();
-      this.onExec = insert(Breakpoints.create(s, BreakpointType.ACTIVITY_ON_EXEC, vm));
+      this.threadPool = vm.getThreadPool();
+      this.onExec = insert(
+          Breakpoints.create(s, BreakpointType.ACTIVITY_ON_EXEC, vm));
     }
 
     @Specialization(guards = "clazz == TaskClass")
     @TruffleBoundary
-    public final SomForkJoinTask spawnTask(final SClass clazz, final SBlock block) {
-      throw new NotYetImplementedException(); // not supported anymore
+    public final SomForkJoinOrg spawnTask(final SClass clazz,
+        final SBlock block) {
+      SomForkJoinOrg task = createTask(new Object[] {block},
+          onExec.executeShouldHalt(), block, sourceSection,true);
+      forkJoinPool.execute(task);
+      return task;
     }
 
     @Specialization(guards = "clazz == ThreadClass")
-    public final SomThreadTask spawnThread(final SClass clazz, final SBlock block) {
-      SomThreadTask thread = createThread(new Object[] {block},
+    public final SomThreadTask spawnThread(final SClass clazz,
+        final SBlock block) {
+      SomThreadTask thread = createThread(new Object[] { block },
           onExec.executeShouldHalt(), block, sourceSection);
       threadPool.execute(thread);
       return thread;
@@ -122,19 +143,20 @@ public abstract class ActivitySpawn {
       }
 
       SSymbol sel = procCls.getMixinDefinition().getPrimaryFactorySelector();
-      SInvokable disp = procCls.getMixinDefinition().getFactoryMethods().get(sel);
-      SObjectWithClass obj = (SObjectWithClass) disp.invoke(new Object[] {procCls});
+      SInvokable disp = procCls.getMixinDefinition().getFactoryMethods()
+          .get(sel);
+      SObjectWithClass obj = (SObjectWithClass) disp
+          .invoke(new Object[] { procCls });
 
-      processesPool.submit(createProcess(obj, sourceSection,
-          onExec.executeShouldHalt()));
+      processesPool.submit(
+          createProcess(obj, sourceSection, onExec.executeShouldHalt()));
       return Nil.nilObject;
     }
 
     @Override
     protected boolean isTaggedWithIgnoringEagerness(final Class<?> tag) {
-      if (tag == ActivityCreation.class ||
-          tag == ExpressionBreakpoint.class ||
-          tag == StatementTag.class) {
+      if (tag == ActivityCreation.class || tag == ExpressionBreakpoint.class
+          || tag == StatementTag.class) {
         return true;
       }
       return super.isTaggedWith(tag);
@@ -142,44 +164,54 @@ public abstract class ActivitySpawn {
   }
 
   @GenerateNodeFactory
-  @ImportStatic({ThreadingModule.class, ChannelPrimitives.class, ActivitySpawn.class})
+  @ImportStatic({ ThreadingModule.class, ChannelPrimitives.class,
+      ActivitySpawn.class })
   @NodeChild(value = "argArr", type = ToArgumentsArrayNode.class,
-    executeWith = {"secondArg", "firstArg"})
+      executeWith = { "secondArg", "firstArg" })
   @Primitive(primitive = "threading:threadSpawn:with:",
-    extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
+      extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
   @Primitive(primitive = "threading:taskSpawn:with:",
-    extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
+      extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
   @Primitive(primitive = "proc:spawn:with:",
-    extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
+      extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
   @Primitive(selector = "spawn:with:",
-  extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
+      extraChild = ToArgumentsArrayNodeFactory.class, requiresContext = true)
   public abstract static class SpawnWithPrim extends TernaryExpressionNode {
-    private final ForkJoinPool forkJoinPool;
-    private final ForkJoinPool processesPool;
-    private final ForkJoinPool threadPool;
 
-    /** Breakpoint info for triggering suspension on first execution of code in activity. */
-    @Child protected AbstractBreakpointNode onExec;
+    private final ForkJoinPool       forkJoinPool;
+    private final ForkJoinPool       processesPool;
+    private final ForkJoinPool       threadPool;
+
+    /**
+     * Breakpoint info for triggering suspension on first execution of code in
+     * activity.
+     */
+    @Child
+    protected AbstractBreakpointNode onExec;
 
     public SpawnWithPrim(final boolean ew, final SourceSection s, final VM vm) {
       super(ew, s);
-      this.forkJoinPool  = vm.getForkJoinPool();
+      this.forkJoinPool = vm.getForkJoinPool();
       this.processesPool = vm.getProcessPool();
-      this.threadPool    = vm.getThreadPool();
-      this.onExec = insert(Breakpoints.create(s, BreakpointType.ACTIVITY_ON_EXEC, vm));
+      this.threadPool = vm.getThreadPool();
+      this.onExec = insert(
+          Breakpoints.create(s, BreakpointType.ACTIVITY_ON_EXEC, vm));
     }
 
     @Specialization(guards = "clazz == TaskClass")
-    public SomForkJoinTask spawnTask(final SClass clazz, final SBlock block,
+    public SomForkJoinOrg spawnTask(final SClass clazz, final SBlock block,
         final SArray somArgArr, final Object[] argArr) {
-      throw new NotYetImplementedException(); // not supported anymore
+      SomForkJoinOrg task = createTask(argArr,
+          onExec.executeShouldHalt(), block, sourceSection, true);
+      forkJoinPool.execute(task);
+      return task;
     }
 
     @Specialization(guards = "clazz == ThreadClass")
     public SomThreadTask spawnThread(final SClass clazz, final SBlock block,
         final SArray somArgArr, final Object[] argArr) {
-      SomThreadTask thread = createThread(argArr,
-          onExec.executeShouldHalt(), block, sourceSection);
+      SomThreadTask thread = createThread(argArr, onExec.executeShouldHalt(),
+          block, sourceSection);
       threadPool.execute(thread);
       return thread;
     }
@@ -194,19 +226,19 @@ public abstract class ActivitySpawn {
       }
 
       SSymbol sel = procCls.getMixinDefinition().getPrimaryFactorySelector();
-      SInvokable disp = procCls.getMixinDefinition().getFactoryMethods().get(sel);
+      SInvokable disp = procCls.getMixinDefinition().getFactoryMethods()
+          .get(sel);
       SObjectWithClass obj = (SObjectWithClass) disp.invoke(argArr);
 
-      processesPool.submit(createProcess(obj, sourceSection,
-          onExec.executeShouldHalt()));
+      processesPool.submit(
+          createProcess(obj, sourceSection, onExec.executeShouldHalt()));
       return Nil.nilObject;
     }
 
     @Override
     protected boolean isTaggedWithIgnoringEagerness(final Class<?> tag) {
-      if (tag == ActivityCreation.class ||
-          tag == ExpressionBreakpoint.class ||
-          tag == StatementTag.class) {
+      if (tag == ActivityCreation.class || tag == ExpressionBreakpoint.class
+          || tag == StatementTag.class) {
         return true;
       }
       return super.isTaggedWith(tag);

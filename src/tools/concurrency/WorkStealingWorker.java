@@ -7,6 +7,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import som.VM;
 import som.interpreter.nodes.dispatch.BlockDispatchNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
+import som.vm.VmSettings;
 import som.vmobjects.SBlock;
 
 public class WorkStealingWorker implements Runnable {
@@ -24,16 +25,18 @@ public class WorkStealingWorker implements Runnable {
 
     while (true) {
       boolean stolenTask = tryStealingAndExecuting(currentThread);
-      //doBackoffIfNecessary(currentThread, stolenTask);
+      if(VmSettings.ENABLE_BACKOFF) {
+        doBackoffIfNecessary(currentThread, stolenTask);
+      }
     }
   }
 
-  public static void doBackoffIfNecessary(
-      final TracingActivityThread currentThread, final boolean stolenTask) {
+  public static void doBackoffIfNecessary(final TracingActivityThread currentThread, final boolean stolenTask) {
+
     if (stolenTask) {
       currentThread.workStealingTries = 0;
     } else {
-      //WorkStealingWorker.backOffBeforeRetryingStealing(currentThread);
+      WorkStealingWorker.backOffBeforeRetryingStealing(currentThread);
     }
   }
 

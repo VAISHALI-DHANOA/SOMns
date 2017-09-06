@@ -26,6 +26,11 @@ public class VmSettings {
 
   public static final boolean IGV_DUMP_AFTER_PARSING;
 
+  public static final boolean ENABLE_BACKOFF;
+  public static final boolean ENABLE_SEQUENTIAL;
+  public static final boolean ENABLE_ORG;
+
+
   public static final String INSTRUMENTATION_PROP = "som.instrumentation";
 
   static {
@@ -44,6 +49,13 @@ public class VmSettings {
     MEMORY_TRACING = getBool("som.memoryTracing",   false);
     REPLAY = getBool("som.replay", false);
     DISABLE_TRACE_FILE = getBool("som.disableTraceFile", false) || REPLAY;
+
+    String somConfig = System.getProperty("som.fj","");
+    List<String> sCon = Arrays.asList(somConfig.split(":"));
+    boolean check = (sCon.size() > 0 && !somConfig.isEmpty());
+    ENABLE_BACKOFF    = sCon.contains("backoff") && check;
+    ENABLE_SEQUENTIAL = sCon.contains("seq") && check;
+    ENABLE_ORG         = sCon.contains("org") && check;
 
     String atConfig = System.getProperty("som.actorTracingCfg", "");
     List<String> al = Arrays.asList(atConfig.split(":"));

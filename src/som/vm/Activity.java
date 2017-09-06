@@ -16,4 +16,14 @@ public interface Activity {
   default void setStepToJoin(final boolean val) { }
 
   void setStepToNextTurn(boolean val);
+
+  /**
+   * The id for the next trace buffer used with this activity.
+   * Since an activity is executed by at most one thread at a time,
+   * this id allows us to order trace buffer fragments.
+   * Non-tracing activities don't need to implement it.
+   */
+  default int getNextTraceBufferId() {
+    throw new UnsupportedOperationException("Should never be called");
+}
 }

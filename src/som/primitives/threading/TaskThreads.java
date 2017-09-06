@@ -61,7 +61,70 @@ public final class TaskThreads {
           "Step to next turn is not supported " +
           "for threads. This code should never be reached.");
     }
+
+    @Override
+    public int getNextTraceBufferId() {
+      throw new UnsupportedOperationException("Should never be executed");
+    }
+
   }
+
+  public static class SomForkJoinOrg extends SomTaskOrThread {
+    private static final long serialVersionUID = -2145613708553535622L;
+
+    public SomForkJoinOrg(final Object[] argArray, final boolean stopOnRoot) {
+      super(argArray, stopOnRoot);
+    }
+
+    @Override
+    public String getName() {
+      return getMethod().toString();
+    }
+
+    @Override
+    public ActivityType getType() {
+      return ActivityType.TASK;
+    }
+  }
+
+
+
+  public static class TracedForkJoinTask extends SomForkJoinOrg {
+    private static final long serialVersionUID = -2763766745049695112L;
+
+    private final long id;
+    protected boolean  stopOnJoin;
+
+    private int nextTraceBufferId;
+
+    public TracedForkJoinTask(final Object[] argArray, final boolean stopOnRoot) {
+      super(argArray, stopOnRoot);
+      this.id = TracingActivityThread.newEntityId();
+    }
+
+    @Override
+    public final boolean stopOnJoin() {
+      return stopOnJoin;
+    }
+
+    @Override
+    public void setStepToJoin(final boolean val) {
+      stopOnJoin = val;
+    }
+
+    @Override
+    public int getNextTraceBufferId() {
+      int result = nextTraceBufferId;
+      nextTraceBufferId += 1;
+      return result;
+    }
+
+    @Override
+    public long getId() {
+      return id;
+    }
+}
+
 
   public static class SomForkJoinTask {
     public final Object[]   evaluateArgsForSpawn;
