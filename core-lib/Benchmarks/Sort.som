@@ -111,7 +111,7 @@ class SortBenchmarks usingPlatform: platform andHarness: harness = (
 	(i < high) ifTrue: [tb join].
     )
     
-    dataSize = ( ^800 )
+    dataSize = ( ^80000 )
   ) : (
     public newInstance = ( ^ self new )
     public setupVerifiedRun: run = ( run innerIterations: 1 )
