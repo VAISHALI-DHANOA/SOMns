@@ -28,8 +28,8 @@ class JacobiSuite usingPlatform: platform andHarness: harness = (
   public class Jacobi = Benchmark (
   | private epsilon = 0.0001.
     private expected = createExpected.
-    private N = 1024.
-    private dataSize = 1026.
+    private N = 256.
+    private dataSize = 258.
     private granularity = 2. |
   )(
     public benchmark = (     
@@ -40,13 +40,17 @@ class JacobiSuite usingPlatform: platform andHarness: harness = (
     
     | i |
     i := 1.
+    (* [ i <= 15] whileTrue: [
+                          ( ', ' + (result at: i) ) print.
+                          i := i + 1. ]. *)
+    i := 1.
     [ i <= 15] whileTrue: [
                           ((result at: i) = (expected at: i)) ifFalse: [ error: 'Incorrect Result ' + i + ': ' + (result at: i) + ' ' + (expected at: i) ]. 
                           i := i + 1. ].   
     ^ true.
     )
 
-     private createExpected = (
+    (* private createExpected = (
       | e |
       e := Vector new.
       e, 0.03532437858581544,0.017849813902944933,0.01192949360929535,
@@ -55,7 +59,7 @@ class JacobiSuite usingPlatform: platform andHarness: harness = (
          0.0035942981873005597,0.0032725732667924223,0.0029970514366798318,
          0.0027653688264400733,0.0025724189553933963,0.002397642724590421.
       ^ e asArray
-    )  (* for datasize 1024*)
+    )  *) (* for datasize 1024*)
 
 
     (*  private createExpected = (
@@ -67,7 +71,33 @@ class JacobiSuite usingPlatform: platform andHarness: harness = (
          0.011171329788966233, 0.011045406597036733, 0.01075206889222824, 
          0.010351325524401711, 0.009886317917326415, 0.009387419540406117.
       ^ e asArray
-    )  *)
+    )  *) (* for datasize 16 *)
+
+
+
+     private createExpected = (
+      | e |
+      e := Vector new.
+      e, 0.04485635375976571, 0.022454818422999345, 0.015009955959066179, 
+         0.011189116709923008, 0.008988350379449561, 0.007473777737741605, 
+         0.006421113179404858, 0.005607730722584248, 0.005001425315033503, 
+         0.004491799673319474, 0.004091032313171428, 0.0037461695373718906, 
+         0.0034564480260170782, 0.003215396904645007, 0.0029970514366798318.
+      ^ e asArray
+    )  (* for datasize 256 *)
+
+
+  (* private createExpected = (
+      | e |
+      e := Vector new.
+      e, 0.233427758789063, 0.229009603634477, 0.227870588728938,
+         0.227419214956334, 0.22719596653086,  0.227069554727413,
+         0.226991127818523, 0.226939154970952, 0.226902952237417,
+         0.226876730468932, 0.226857131930357, 0.226842100532465,
+         0.226830320188084, 0.226820916811076, 0.226813291463287.
+      ^ e asArray
+    ) *) (* for datasize 256 -- incorrect *)
+
 
     private computeResult = (
 
@@ -93,7 +123,7 @@ class JacobiSuite usingPlatform: platform andHarness: harness = (
                             k := k + 1. ].
 
     i := 0.
-    innersteps := 10. (* 2^10 = 1024 *)
+    innersteps := 8. (* 2^10 = 1024, 2^8 = 256 *)
     iter := 1.
 
 
