@@ -27,73 +27,84 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
   private Task      = platform threading Task.
 |)(
   public class Queens = Benchmark (
-    | private size = 9. 
-      nSolutions ::= 0.
-      private arr ::= Array new: 5000000.                                
-      private index ::= 1.
-      private lock = Mutex new. |
+  | private size = 9. 
+    nSolutions ::= 0.
+    private lock = Mutex new. |
   )(
     benchmark = (
-      ^ computeResult.
+      ^ compute.
     )
 
     verifyResult: result = (        
-      (result = 352) ifFalse: [error:'Incorrect Result: ' + result].
+      result = 352 ifFalse: [error:'Incorrect Result: ' + result].
 
       ^ true.
     )
 
-    private computeResult = (
-      | a i |
+    private compute = (
+      | a i task |
       a := Array new: 0.
-      nqueens: a and: 0.
+      task := nqueens: a and: 0.
+      task ~= nil
+        ifTrue: [ task join ].
 
-       nSolutions := 0.
+      nSolutions := 0.
 
-      arr do: [:task | task join ].
       ^ nSolutions.
     )
 
     private nqueens: a and: depth = (
-     (size = depth)
-       ifTrue:  [ lock critical: [ nSolutions := nSolutions + 1. ] ]
-       ifFalse: [ arr at: index put: ( Task spawn: [ temp: a and: depth ]).
-                  index := index + 1.].
+     size = depth ifTrue: [
+       lock critical: [ nSolutions := nSolutions + 1. ].
+       ^ nil ].
+      
+      ^ Task spawn: [ temp: a and: depth ].
     )
 
     private temp: a and: depth = (
-     | i |
-     i := 0.
-     [ i < size ] whileTrue: [ nqueenskernel: a and: depth with: i. i := i + 1 ].
+      | tasks |
+      tasks := Array new: size withAll: #empty.
+      
+      1 to: size do: [:i |
+        | taskOrNil | 
+        taskOrNil := nqueenskernel: a and: depth with: i - 1.
+        tasks at: i put: taskOrNil
+      ].
+
+      tasks do: [:tOrN |
+        tOrN ~= nil ifTrue: [ tOrN join ] ]
     )
 
     private nqueenskernel: a and: depth with: index = (
-      | b i status |
-      b := Array new: (depth + 1) withAll: 0.
+      | b status |
+      b := Array new: depth + 1 withAll: 0.
 
-      i := 1.
-      [ i <= depth ] whileTrue: [
-        b at: i put: ( a at: i).
-        i := i + 1 ].
+      1 to: depth do: [:i |
+        b at: i put: (a at: i) ].
 
       b at: depth + 1 put: index.
+
       status := ok: depth + 1 and: b.
-      status ifTrue: [ nqueens: b and: (depth + 1) ].
+      status
+        ifTrue:  [ ^ nqueens: b and: depth + 1 ]
+        ifFalse: [ ^ nil ]
     )
     
     private ok: n and: a = (
-     | i p j q |
-     i := 1.
-     [ i <= n ] whileTrue: [ p := a at: i. 
-                             j := i + 1.
-                             [ j <= n ] whileTrue: [ q := a at: j.
-                                                     ( (q = p) || (q = (p - (j - i))) || (q = (p + (j - i))) ) ifTrue: [ ^ false ].
-                                                     j := j + 1 ].
-                             i := i + 1 ].
-    ^ true.
+      | p q |
+
+      1 to: n do: [:i |
+        p := a at: i. 
+        i + 1 to: n do: [:j |
+          q := a at: j.
+          ( (q = p) || (q = (p - (j - i))) || (q = (p + (j - i))) )
+            ifTrue: [ ^ false ].
+        ].
+      ].
+      ^ true.
     )
   ) : (
     public newInstance = ( ^ Queens new )
     public setupVerifiedRun: run = ( run innerIterations: 1 )
-      )
+  )
 )
