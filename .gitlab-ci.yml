@@ -1,7 +1,7 @@
 stages:
-  - build-and-test
+  # - build-and-test
   - benchmark
-  - full-test
+  # - full-test
 
 variables:
   PYTHONUNBUFFERED: "true"
@@ -11,18 +11,18 @@ variables:
 before_script:
   - git submodule update --init
 
-build_and_test_job:
-  stage: build-and-test
-  tags: [benchmarks, infinity]
-  script:
-    - timeout 5m ant unit-tests som-tests
-
-full_test_job:
-  stage: full-test
-  tags: [benchmarks, infinity]
-  script:
-    - timeout 10m ant dynamic-metrics-tests replay-tests
-    - cd tools/kompos && npm install && npm test
+# build_and_test_job:
+#   stage: build-and-test
+#   tags: [benchmarks, infinity]
+#   script:
+#     - timeout 5m ant unit-tests som-tests
+#
+# full_test_job:
+#   stage: full-test
+#   tags: [benchmarks, infinity]
+#   script:
+#     - timeout 10m ant dynamic-metrics-tests replay-tests
+#     - cd tools/kompos && npm install && npm test
 
 benchmark_forkjoin:
   stage: benchmark
