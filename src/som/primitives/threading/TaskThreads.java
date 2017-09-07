@@ -193,7 +193,7 @@ public final class TaskThreads {
 
   public static final class ForkJoinThreadFactory implements ForkJoinWorkerThreadFactory {
 
-    private static final int MAX_NUM_THREADS = VmSettings.ENABLE_ORG ? 128 : 4000;
+    private static final int MAX_NUM_THREADS = VmSettings.ENABLE_ORG ? 1024 : 4000;
 
     private int numThreadsCreated;
 
