@@ -25,14 +25,14 @@ class IntegrateSuite usingPlatform: platform andHarness: harness = (
 )(
   public class Integrate = Benchmark (
   | private epsilon = 0.00000000100.
-    private xMax = 1000.0. |
+    private xMax = 10000.0. |
   )(
     public benchmark = (     
       ^ computeArea: xMax.
     )
 
     public verifyResult: result = (
-      (result = 250000500000.001007080078125) ifFalse: [ error: 'Incorrect Result: ' + result].
+      (result = 2500000050000000) ifFalse: [ error: 'Incorrect Result: ' + result].
       ^ true
     )
 
@@ -54,12 +54,10 @@ class IntegrateSuite usingPlatform: platform andHarness: harness = (
       ar := (fr + fc) * hh.
       alr := al + ar.
       ((alr - a < epsilon) && (a - alr < epsilon)) ifTrue: [ ^ alr].
-      (* texpr1 := Task spawn: [recEval: c farLeft: fc right: r farRight: fr area: ar].
+      texpr1 := Task spawn: [recEval: c farLeft: fc right: r farRight: fr area: ar].
       texpr2 := Task spawn: [recEval: l farLeft: fl right: c farRight: fc area: al].
       expr1 := texpr1 join.
-      expr2 := texpr2 join. *)
-      expr1 := recEval: c farLeft: fc right: r farRight: fr area: ar.
-      expr2 := recEval: l farLeft: fl right: c farRight: fc area: al. 
+      expr2 := texpr2 join.      
       ^ expr1 + expr2.
      )
   ) : (
