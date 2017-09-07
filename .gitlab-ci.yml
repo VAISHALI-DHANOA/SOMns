@@ -5,7 +5,7 @@ stages:
 
 variables:
   PYTHONUNBUFFERED: "true"
-  JVMCI_BIN: /home/gitlab-runner/.local/graal-core/bin/java
+  JVMCI_BIN: /home/gitlab-runner/.local/graal-core-may/bin/java
   JVMCI_VERSION_CHECK: ignore
 
 before_script:
