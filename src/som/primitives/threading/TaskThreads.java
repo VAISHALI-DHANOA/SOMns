@@ -192,9 +192,19 @@ public final class TaskThreads {
   }
 
   public static final class ForkJoinThreadFactory implements ForkJoinWorkerThreadFactory {
+
+    private static final int MAX_NUM_THREADS = VmSettings.ENABLE_ORG ? 128 : 4000;
+
+    private int numThreadsCreated;
+
     @Override
-    public ForkJoinWorkerThread newThread(final ForkJoinPool pool) {
-      return new ForkJoinThread(pool);
+    public synchronized ForkJoinWorkerThread newThread(final ForkJoinPool pool) {
+      if (numThreadsCreated < MAX_NUM_THREADS) {
+        numThreadsCreated += 1;
+        return new ForkJoinThread(pool);
+      } else {
+        throw new RuntimeException("Can't create more F/J threads than " + MAX_NUM_THREADS);
+      }
     }
   }
 
