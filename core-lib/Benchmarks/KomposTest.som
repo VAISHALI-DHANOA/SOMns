@@ -94,7 +94,7 @@ private calculatePrefixSum: arr = (
 	^ prefixSum
 )
 
-dataSize = (^ 1000)
+dataSize = ( ^ 100000 )
 )
 :(
 public newInstance = (^ Kompos new)
