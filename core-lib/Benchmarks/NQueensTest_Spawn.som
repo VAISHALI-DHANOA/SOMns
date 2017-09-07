@@ -24,8 +24,8 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
   private Benchmark = harness Benchmark.
   private Vector    = platform kernel Vector.
   private Mutex        = platform threading Mutex.
-|
-)(
+  private Task      = platform threading Task.
+|)(
   public class Queens = Benchmark (
     | private size = 9. 
       nSolutions ::= 0.

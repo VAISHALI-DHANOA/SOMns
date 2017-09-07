@@ -8,10 +8,10 @@ class KomposTest usingPlatform: platform andHarness: harness = (
 |)
 (
 public class Kompos = Benchmark (
-|   private arr = self randomArray: self dataSize with: Random new.|
-)
-(
-private class TempTreeNode left: left right: right sum: sum low: low high: high = (
+|   private arr = self randomArray: self dataSize with: Random new.
+    private prefixSum = calculatePrefixSum: arr.
+|)(
+  private class TempTreeNode left: left right: right sum: sum low: low high: high = (
     | public left  = left.
       public right = right.
       public sum  = sum.
@@ -76,10 +76,9 @@ array := Array new: size withAll: [random next].
 
 
 public verifyResult: result = (
-| prefixSum |
-prefixSum := calculatePrefixSum: arr.
-result doIndexes: [ :i | ((result at: i) = (prefixSum at: i)) ifFalse: [ error: 'Incorrect Result' + i + ' ' + (result at: i) + ' ' + (prefixSum at: i) ]].
-^ true
+
+  result doIndexes: [ :i | ((result at: i) = (prefixSum at: i)) ifFalse: [ error: 'Incorrect Result' + i + ' ' + (result at: i) + ' ' + (prefixSum at: i) ]].
+  ^ true
 )
 
 
@@ -94,11 +93,10 @@ private calculatePrefixSum: arr = (
 	^ prefixSum
 )
 
-dataSize = (^ 1000)
+dataSize = ( ^ 100000 )
 )
 :(
 public newInstance = (^ Kompos new)
 public setupVerifiedRun: run = (run innerIterations: 1)
 )
 )
-

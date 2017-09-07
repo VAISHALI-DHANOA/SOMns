@@ -20,6 +20,7 @@ THE SOFTWARE.
 class IntegrateSuite usingPlatform: platform andHarness: harness = (
 | private Array     = platform kernel Array.
   private Benchmark = harness Benchmark.
+  private Task      = platform threading Task.
 |
 )(
   public class Integrate = Benchmark (
@@ -67,4 +68,3 @@ class IntegrateSuite usingPlatform: platform andHarness: harness = (
   public setupVerifiedRun: run = ( run innerIterations: 1 )
  )
 )
-

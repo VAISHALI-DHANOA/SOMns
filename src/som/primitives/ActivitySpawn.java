@@ -121,8 +121,13 @@ public abstract class ActivitySpawn {
         final SBlock block) {
       SomForkJoinOrg task = createTask(new Object[] {block},
           onExec.executeShouldHalt(), block, sourceSection,true);
-      forkJoinPool.execute(task);
+      scheduleOnPool(task);
       return task;
+    }
+
+    @TruffleBoundary
+    private void scheduleOnPool(final SomForkJoinOrg task) {
+      forkJoinPool.execute(task);
     }
 
     @Specialization(guards = "clazz == ThreadClass")
@@ -203,8 +208,13 @@ public abstract class ActivitySpawn {
         final SArray somArgArr, final Object[] argArr) {
       SomForkJoinOrg task = createTask(argArr,
           onExec.executeShouldHalt(), block, sourceSection, true);
-      forkJoinPool.execute(task);
+      scheduleOnPool(task);
       return task;
+    }
+
+    @TruffleBoundary
+    private void scheduleOnPool(final SomForkJoinOrg task) {
+      forkJoinPool.execute(task);
     }
 
     @Specialization(guards = "clazz == ThreadClass")
@@ -245,3 +255,4 @@ public abstract class ActivitySpawn {
     }
   }
 }
+

@@ -6,7 +6,7 @@ class ForkJoinBenchmarks usingPlatform: platform andHarness: harness = (
 |)(
   public class Fib = Benchmark (
   | private expected = createExpected.
-    private N = 4. |
+    private N = 20. |
   )(
     public benchmark = ( 
       ^ fib: N
@@ -22,12 +22,6 @@ class ForkJoinBenchmarks usingPlatform: platform andHarness: harness = (
       b := tb join.
 
       ^ a + b. 
-
-(*      ta :=  fib: n - 1 .
-      tb :=  fib: n - 2.
-
-
-      ^ ta + tb. *)
     )
 
     public verifyResult: result = (

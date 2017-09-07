@@ -105,13 +105,18 @@ public final class VM {
         new ProcessThreadFactory(), new UncaughtExceptions(), true);
     forkJoinPool = new ForkJoinPool(VmSettings.NUM_THREADS,
         new ForkJoinThreadFactory(), new UncaughtExceptions(), false);
-    threadPool = new ForkJoinPool(MAX_THREADS, new ForkJoinThreadFactory(),
-        new UncaughtExceptions(), false);
+
+    if (VmSettings.ENABLE_ORG) {
+      threadPool = new ForkJoinPool(8, new ForkJoinThreadFactory(),
+          new UncaughtExceptions(), false);
+    } else {
+      threadPool = new ForkJoinPool(MAX_THREADS, new ForkJoinThreadFactory(),
+          new UncaughtExceptions(), false);
+    }
 
     this.wsWork = Collections.synchronizedList(new ArrayList<WSWork>());
 
-    if(!VmSettings.ENABLE_ORG)
-    {
+    if (!VmSettings.ENABLE_ORG) {
       wsWork.add(new WSWork(forkJoinPool));
       wsWork.add(new WSWork(forkJoinPool));
       wsWork.add(new WSWork(forkJoinPool));
