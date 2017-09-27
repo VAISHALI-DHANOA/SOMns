@@ -27,52 +27,60 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
   private Task      = platform threading Task.
 |)(
   public class Queens = Benchmark (
-  | private size = 9. 
+  | private size = 5. 
     nSolutions ::= 0.
-    private lock = Mutex new. |
+    private lock = Mutex new. 
+    private dResult = 10. |
   )(
     benchmark = (
       ^ compute.
     )
 
-    verifyResult: result = (        
-      result = 352 ifFalse: [error:'Incorrect Result: ' + result].
+    verifyResult: result = (
+
+      ('result: ' + result) println.
+      result = dResult ifFalse: [error:'Incorrect Result: ' + result].
 
       ^ true.
     )
 
     private compute = (
-      | a i task |
+      | a task |
       a := Array new: 0.
       task := nqueens: a and: 0.
-      task ~= nil
-        ifTrue: [ task join ].
+      task println.
+      (* task notNil
+        ifTrue: [ task join.]. *)
 
-      nSolutions := 0.
-
-      ^ nSolutions.
+      [nSolutions ~= dResult] whileTrue:[                                    
+                                         nSolutions = dResult ifTrue: [  ( 'compute: ' + nSolutions ) println.
+                                         ^ nSolutions.].
+                                        ].
+       nSolutions = dResult ifTrue: [ 'Sequential case' println.
+                                      ^ nSolutions.]
+    
     )
 
     private nqueens: a and: depth = (
-     size = depth ifTrue: [
-       lock critical: [ nSolutions := nSolutions + 1. ].
-       ^ nil ].
-      
-      ^ Task spawn: [ temp: a and: depth ].
+       size = depth ifTrue: [  lock critical: [ nSolutions := nSolutions + 1. 
+                                                ('NQueens: ' + nSolutions) println.
+                                              ].
+                               ^ nil 
+                            ].
+       
+       ^ Task spawn: [ temp: a and: depth ].
     )
 
     private temp: a and: depth = (
       | tasks |
       tasks := Array new: size withAll: #empty.
-      
       1 to: size do: [:i |
         | taskOrNil | 
         taskOrNil := nqueenskernel: a and: depth with: i - 1.
-        tasks at: i put: taskOrNil
-      ].
+        tasks at: i put: taskOrNil.      
+        ].
 
-      tasks do: [:tOrN |
-        tOrN ~= nil ifTrue: [ tOrN join ] ]
+      tasks do: [:tOrN | tOrN notNil ifTrue: [ tOrN join. ] ]
     )
 
     private nqueenskernel: a and: depth with: index = (
@@ -95,12 +103,11 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
 
       1 to: n do: [:i |
         p := a at: i. 
-        i + 1 to: n do: [:j |
-          q := a at: j.
-          ( (q = p) || (q = (p - (j - i))) || (q = (p + (j - i))) )
-            ifTrue: [ ^ false ].
-        ].
-      ].
+        i + 1 to: n do: [ :j | q := a at: j.
+                          ( (q = p) || (q = (p - (j - i))) || (q = (p + (j - i))) )
+                          ifTrue: [ ^ false ].
+                        ].
+                  ].
       ^ true.
     )
   ) : (
@@ -108,3 +115,15 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
     public setupVerifiedRun: run = ( run innerIterations: 1 )
   )
 )
+
+
+
+
+ (* task notNil
+        ifTrue: [ 'Enters true statement' println.
+                  task join.
+                  'Joins Task' println.                 
+                   nSolutions ~= 0 ifTrue: [  ( 'compute: ' + nSolutions ) println.
+                                            ^ nSolutions.
+                                         ].
+                ]. *)

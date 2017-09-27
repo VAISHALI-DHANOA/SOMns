@@ -30,6 +30,7 @@ public class VmSettings {
   public static final boolean ENABLE_SEQUENTIAL;
   public static final boolean ENABLE_ORG;
 
+  public static final int SEQ_CUTOFF;
 
   public static final String INSTRUMENTATION_PROP = "som.instrumentation";
 
@@ -56,6 +57,13 @@ public class VmSettings {
     ENABLE_BACKOFF    = sCon.contains("backoff") && check;
     ENABLE_SEQUENTIAL = sCon.contains("seq") && check;
     ENABLE_ORG         = sCon.contains("org") && check;
+
+    String seqCutConfig = System.getProperty("som.seqCut","");
+    if(!seqCutConfig.isEmpty()) {
+      SEQ_CUTOFF = Integer.parseInt(seqCutConfig);
+    } else {
+      SEQ_CUTOFF = 10;
+    }
 
     String atConfig = System.getProperty("som.actorTracingCfg", "");
     List<String> al = Arrays.asList(atConfig.split(":"));
