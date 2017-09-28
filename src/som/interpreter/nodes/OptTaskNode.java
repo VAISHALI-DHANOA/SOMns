@@ -8,7 +8,6 @@ import com.oracle.truffle.api.source.SourceSection;
 
 import som.interpreter.nodes.nary.ExprWithTagsNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
-import som.vm.VmSettings;
 import som.vmobjects.SBlock;
 import tools.concurrency.TracingActivityThread;
 
@@ -19,7 +18,6 @@ public final class OptTaskNode extends ExprWithTagsNode {
 
   @Children private final ExpressionNode[] argArray;
 
-  private int seqCounter = 0;
   private final ConditionProfile condProf = ConditionProfile.createCountingProfile();
 
   public OptTaskNode(final SourceSection source, final ExpressionNode valueSend,
@@ -38,13 +36,6 @@ public final class OptTaskNode extends ExprWithTagsNode {
     Object[] args = executeArgs(frame);
 
     assert args[0] instanceof SBlock;
-
-    if (seqCounter < VmSettings.SEQ_CUTOFF) {
-      somTask = new SomForkJoinTask(null);
-      somTask.result = ((PreevaluatedExpression) valueSend).doPreEvaluated(frame, args);
-      seqCounter++;
-      return somTask;
-    }
 
     TracingActivityThread tracingThread = TracingActivityThread.currentThread();
 
