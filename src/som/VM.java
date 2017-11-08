@@ -60,40 +60,41 @@ import tools.language.StructuralProbe;
 public final class VM {
 
   @CompilationFinal
-  private PolyglotEngine       engine;
+  private PolyglotEngine                      engine;
 
   @CompilationFinal
-  private StructuralProbe      structuralProbe;
+  private StructuralProbe                     structuralProbe;
   @CompilationFinal
-  private WebDebugger          webDebugger;
+  private WebDebugger                         webDebugger;
   @CompilationFinal
-  private Profiler             truffleProfiler;
+  private Profiler                            truffleProfiler;
 
-  private final ForkJoinPool   actorPool;
-  private final ForkJoinPool   forkJoinPool;
-  private final ForkJoinPool   processesPool;
-  private final ForkJoinPool   threadPool;
-  private final List<WSWork>         wsWork;
+  private final ForkJoinPool                  actorPool;
+  private final ForkJoinPool                  forkJoinPool;
+  private final ForkJoinPool                  processesPool;
+  private final ForkJoinPool                  threadPool;
+  private final List<WSWork>                  wsWork;
 
-  private final boolean        avoidExitForTesting;
+  private final boolean                       avoidExitForTesting;
   @CompilationFinal
-  private ObjectSystem         objectSystem;
+  private ObjectSystem                        objectSystem;
 
-  private int                  lastExitCode = 0;
-  private volatile boolean     shouldExit   = false;
-  private final VmOptions      options;
+  private int                                 lastExitCode   = 0;
+  private volatile boolean                    shouldExit     = false;
+  private final VmOptions                     options;
 
   @CompilationFinal
-  private SObjectWithoutFields vmMirror;
+  private SObjectWithoutFields                vmMirror;
   @CompilationFinal
-  private Actor                mainActor;
+  private Actor                               mainActor;
 
-  private static final int     MAX_THREADS  = 0x7fff;
+  private static final int                    MAX_THREADS    = 0x7fff;
 
-  public static final int MAX_WS_THREADS = 100;
+  public static final int                     MAX_WS_THREADS = 100;
   @CompilationFinal(dimensions = 1)
-  public static final TracingActivityThread[] threads = new TracingActivityThread[MAX_WS_THREADS];
-  @CompilationFinal public static int numWSThreads = 0;
+  public static final TracingActivityThread[] threads        = new TracingActivityThread[MAX_WS_THREADS];
+  @CompilationFinal
+  public static int                           numWSThreads   = 0;
 
   public VM(final VmOptions vmOptions, final boolean avoidExitForTesting) {
     this.avoidExitForTesting = avoidExitForTesting;
@@ -116,13 +117,13 @@ public final class VM {
 
     this.wsWork = Collections.synchronizedList(new ArrayList<WSWork>());
 
-    if (!VmSettings.ENABLE_ORG) {
+    if (!VmSettings.ENABLE_SEQUENTIAL || !VmSettings.ENABLE_ORG) {
       wsWork.add(new WSWork(forkJoinPool));
       wsWork.add(new WSWork(forkJoinPool));
       wsWork.add(new WSWork(forkJoinPool));
 
       for (WSWork w : wsWork) {
-       w.execute();
+        w.execute();
       }
     }
 
@@ -259,7 +260,8 @@ public final class VM {
   }
 
   private void shutdownPools() {
-    ForkJoinPool[] pools = new ForkJoinPool[] {actorPool, processesPool, forkJoinPool, threadPool};
+    ForkJoinPool[] pools = new ForkJoinPool[] { actorPool, processesPool,
+        forkJoinPool, threadPool };
 
     for (ForkJoinPool pool : pools) {
       pool.shutdown();

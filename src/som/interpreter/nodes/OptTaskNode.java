@@ -8,17 +8,22 @@ import com.oracle.truffle.api.source.SourceSection;
 
 import som.interpreter.nodes.nary.ExprWithTagsNode;
 import som.primitives.threading.TaskThreads.SomForkJoinTask;
+import som.vm.VmSettings;
 import som.vmobjects.SBlock;
 import tools.concurrency.TracingActivityThread;
 
 public final class OptTaskNode extends ExprWithTagsNode {
 
-  @Child private ExpressionNode valueSend;
-  @Child private ExpressionNode block;
+  @Child
+  private ExpressionNode         valueSend;
+  @Child
+  private ExpressionNode         block;
 
-  @Children private final ExpressionNode[] argArray;
+  @Children
+  private final ExpressionNode[] argArray;
 
-  private final ConditionProfile condProf = ConditionProfile.createCountingProfile();
+  private final ConditionProfile condProf = ConditionProfile
+      .createCountingProfile();
 
   public OptTaskNode(final SourceSection source, final ExpressionNode valueSend,
       final ExpressionNode block, final ExpressionNode[] argArray) {
@@ -39,12 +44,18 @@ public final class OptTaskNode extends ExprWithTagsNode {
 
     TracingActivityThread tracingThread = TracingActivityThread.currentThread();
 
-    if (condProf.profile(isSystemLikelyIdle(tracingThread))) {
+    if (VmSettings.ENABLE_PARALLEL) {
       somTask = new SomForkJoinTask(args);
       offerTaskForStealing(somTask, tracingThread);
     } else {
-      somTask = new SomForkJoinTask(null);
-      somTask.result = ((PreevaluatedExpression) valueSend).doPreEvaluated(frame, args);
+      if (condProf.profile(isSystemLikelyIdle(tracingThread))) {
+        somTask = new SomForkJoinTask(args);
+        offerTaskForStealing(somTask, tracingThread);
+      } else {
+        somTask = new SomForkJoinTask(null);
+        somTask.result = ((PreevaluatedExpression) valueSend)
+            .doPreEvaluated(frame, args);
+      }
     }
 
     return somTask;
@@ -66,7 +77,8 @@ public final class OptTaskNode extends ExprWithTagsNode {
   }
 
   @TruffleBoundary
-  private void offerTaskForStealing(final SomForkJoinTask somTask, final TracingActivityThread tracingThread) {
+  private void offerTaskForStealing(final SomForkJoinTask somTask,
+      final TracingActivityThread tracingThread) {
     try {
       tracingThread.taskQueue.put(somTask);
     } catch (InterruptedException e) {
@@ -75,7 +87,8 @@ public final class OptTaskNode extends ExprWithTagsNode {
   }
 
   @TruffleBoundary
-  public static boolean isSystemLikelyIdle(final TracingActivityThread tracingThread) {
+  public static boolean isSystemLikelyIdle(
+      final TracingActivityThread tracingThread) {
     return tracingThread.taskQueue.isEmpty();
   }
 }
