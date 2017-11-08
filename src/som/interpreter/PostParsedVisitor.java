@@ -177,7 +177,9 @@ public final class PostParsedVisitor implements NodeVisitor {
 
         Node replacement = exp;
 
-        if (exp instanceof LocalVariableNode) {
+        replacement = new OptJoinNode(node.getSourceSection(), exp);
+
+        /* if (exp instanceof LocalVariableNode) {
 
           if (wvar.contains(((LocalVariableNode) exp).getVar())) {
             replacement = new OptJoinNode(node.getSourceSection(), exp);
@@ -190,7 +192,7 @@ public final class PostParsedVisitor implements NodeVisitor {
 
             replacement = new OptJoinNode(node.getSourceSection(), exp);
           }
-        }
+        } */
 
         node.replace(replacement);
         System.out.println("Join Node: " + replacement);

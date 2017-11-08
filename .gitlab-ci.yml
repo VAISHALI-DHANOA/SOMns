@@ -1,52 +1,34 @@
 stages:
-  - build-and-test
+  # - build-and-test
   - benchmark
-  - full-test
+  # - full-test
 
 variables:
   PYTHONUNBUFFERED: "true"
-  JVMCI_BIN: /home/gitlab-runner/.local/graal-core/bin/java
+  JVMCI_BIN: /home/gitlab-runner/.local/graal-core-may/bin/java
   JVMCI_VERSION_CHECK: ignore
 
 before_script:
   - git submodule update --init
 
-build_and_test_job:
-  stage: build-and-test
-  tags: [benchmarks, infinity]
-  script:
-    - timeout 5m ant unit-tests som-tests
+# build_and_test_job:
+#   stage: build-and-test
+#   tags: [benchmarks, infinity]
+#   script:
+#     - timeout 5m ant unit-tests som-tests
+#
+# full_test_job:
+#   stage: full-test
+#   tags: [benchmarks, infinity]
+#   script:
+#     - timeout 10m ant dynamic-metrics-tests replay-tests
+#     - cd tools/kompos && npm install && npm test
 
-full_test_job:
-  stage: full-test
-  tags: [benchmarks, infinity]
-  script:
-    - timeout 10m ant dynamic-metrics-tests replay-tests
-    - cd tools/kompos && npm install && npm test
-
-benchmark_savina_job:
+benchmark_forkjoin:
   stage: benchmark
   tags: [benchmarks, infinity]
   allow_failure: true
   script:
     - ant compile
-    - export EXP=`if [[ "$CI_BUILD_REF_NAME" = "master" ]]; then echo "SOMns-Savina"; else echo "SOMns-Savina-exp"; fi`; rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns-Savina --branch=master codespeed.conf $EXP
-
-benchmark_job:
-  stage: benchmark
-  tags: [benchmarks, infinity]
-  allow_failure: true
-  script:
-    - ant compile
-    - export EXP=`if [[ "$CI_BUILD_REF_NAME" = "master" ]]; then echo "SOMns"; else echo "SOMns-exp"; fi`; rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns --branch=master codespeed.conf $EXP
-
-benchmark_nightly_job:
-  stage: benchmark
-  tags: [benchmarks, infinity]
-  allow_failure: true
-  only:
-    - triggers
-  script:
-    - ant compile
-    - rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns --branch=master codespeed.conf nightly
-    - rebench -d --without-nice -c --commit-id="$CI_BUILD_REF" --environment="Infinity Ubuntu" --project=SOMns --branch=master codespeed.conf SOMns-Savina-tracing
+    - rebench -d --without-nice codespeed.conf fj
+    - ./bench-results.sh

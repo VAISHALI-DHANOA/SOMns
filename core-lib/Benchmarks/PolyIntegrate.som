@@ -25,14 +25,15 @@ class IntegrateSuite usingPlatform: platform andHarness: harness = (
 )(
   public class Integrate = Benchmark (
   | private epsilon = 0.00000000100.
-    private xMax = 5000.0. |
+    private xMax = 2500.0. | (* For 5000, result = 156250012500000 *)
   )(
     public benchmark = (     
       ^ computeArea: xMax.
     )
 
     public verifyResult: result = (
-      (result = 156250012500000) ifFalse: [ error: 'Incorrect Result: ' + result]. (* 2500000050000000 for 10000 *)
+
+      (result = 9765628125000.004) ifFalse: [ error: 'Incorrect Result: ' + result]. 
       ^ true
     )
 

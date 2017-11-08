@@ -23,6 +23,7 @@ class JacobiSuite usingPlatform: platform andHarness: harness = (
   private Random    = harness Random.
   private Benchmark = harness Benchmark.
   private Vector    = platform kernel Vector.
+  private Task      = platform threading Task.
 |
 )(
   public class Jacobi = Benchmark (
