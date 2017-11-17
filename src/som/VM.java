@@ -117,7 +117,7 @@ public final class VM {
 
     this.wsWork = Collections.synchronizedList(new ArrayList<WSWork>());
 
-    if (!VmSettings.ENABLE_SEQUENTIAL || !VmSettings.ENABLE_ORG) {
+    if (!(VmSettings.ENABLE_SEQUENTIAL || VmSettings.ENABLE_ORG)) {
       wsWork.add(new WSWork(forkJoinPool));
       wsWork.add(new WSWork(forkJoinPool));
       wsWork.add(new WSWork(forkJoinPool));

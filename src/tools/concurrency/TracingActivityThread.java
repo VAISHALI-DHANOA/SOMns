@@ -1,10 +1,10 @@
 package tools.concurrency;
 
 import java.util.ArrayList;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import som.VM;
@@ -36,7 +36,7 @@ public abstract class TracingActivityThread extends ForkJoinWorkerThread {
   protected ConcurrentEntityScope       topEntity;
 
   // Work Steal Parameters
-  public BlockingQueue<SomForkJoinTask> taskQueue = new LinkedBlockingQueue<SomForkJoinTask>();
+  public BlockingDeque<SomForkJoinTask> taskQueue = new LinkedBlockingDeque<SomForkJoinTask>();
 
   public int workStealingTries = 0;
   public final SimpleRandom backoffRnd = new SimpleRandom();

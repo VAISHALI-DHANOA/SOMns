@@ -49,7 +49,7 @@ public class WorkStealingWorker implements Runnable {
       TracingActivityThread victim = selectVictim(currentThread);
 
       if (victim != currentThread) {
-       sf = stealTask(victim);
+       sf = stealFromOther(victim);
       }
     }
 
@@ -78,7 +78,7 @@ public class WorkStealingWorker implements Runnable {
       TracingActivityThread victim = selectVictim(currentThread);
 
       if (victim != currentThread) {
-        sf = stealTask(victim);
+        sf = stealFromOther(victim);
        }
     }
 
@@ -105,6 +105,15 @@ public class WorkStealingWorker implements Runnable {
 
   @TruffleBoundary
   private static SomForkJoinTask stealTask(final TracingActivityThread victim) {
+    if (VmSettings.ENABLE_PARALLEL) {
+      return victim.taskQueue.pollLast();
+    } else {
+      return victim.taskQueue.poll();
+    }
+  }
+
+  @TruffleBoundary
+  private static SomForkJoinTask stealFromOther(final TracingActivityThread victim) {
     return victim.taskQueue.poll();
   }
 
