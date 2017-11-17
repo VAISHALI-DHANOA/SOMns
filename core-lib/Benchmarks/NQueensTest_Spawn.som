@@ -27,10 +27,10 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
   private Task      = platform threading Task.
 |)(
   public class Queens = Benchmark (
-  | private size = 11. 
+  | private size = 10. 
     nSolutions ::= 0.
     private lock = Mutex new. 
-    private dResult = 2680. |
+    private dResult = 724. |
   )(
     benchmark = (
       ^ compute.
@@ -38,7 +38,7 @@ class QueensSuite usingPlatform: platform andHarness: harness = (
 
     verifyResult: result = (
 
-      ('result: ' + result) println.
+      
       result = dResult ifFalse: [error:'Incorrect Result: ' + result].
 
       ^ true.

@@ -156,7 +156,7 @@ class SortBenchmarks usingPlatform: platform andHarness: harness = (
        ^ tree check
     )
     
-    dataSize = ( ^ 1000 )
+    dataSize = ( ^ 100000 )
   ) : (
     public newInstance = ( ^ self new )
     public setupVerifiedRun: run = ( run innerIterations: 1 )
